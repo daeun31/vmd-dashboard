@@ -13,6 +13,7 @@
    ============================================================ */
 var SCHEDULE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBwhOpIFBkqqZ5MNfh9hHOCjRlb7E2L2wZ5Y5biQmAZolWIzKnArYbZk-jDP4d5Z1T53AJVs7g/pub?gid=2038188993&single=true&output=csv";   /* 일정 시트 CSV 주소 (필수) */
 var STORES_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBwhOpIFBkqqZ5MNfh9hHOCjRlb7E2L2wZ5Y5biQmAZolWIzKnArYbZk-jDP4d5Z1T53AJVs7g/pub?gid=743461190&single=true&output=csv";   /* 매장 목록 시트 CSV 주소 (선택, 비우면 내장 목록 사용) */
+var REPORTS_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLFIrSatd-0vtueexT2y4uZQf4O1icT8EXm5JT7DhP91DK7bPbRlRCNJrE_VlnTBStx5xfXvrsu74I/pub?gid=2118325494&single=true&output=csv";   /* 라운딩 보고서 제출현황 시트 CSV 주소 (선택, 구글폼 응답 시트를 웹에 게시해서 연결. 비워두면 이전처럼 날짜 경과만으로 완료 표시) */
 </script>
 <style>
 :root{
@@ -46,34 +47,31 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .kpi .sub.bad{color:var(--red);}
 .bar{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-top:10px;}
 .bar>span{display:block;height:100%;background:var(--accent);}
-.grid-2{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-bottom:14px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
 @media (max-width:820px){.grid-2{grid-template-columns:1fr;}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;}
-.card h2{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
-.card h2 i{font-size:18px;color:var(--accent);}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
-.cal .dow{text-align:center;font-size:11px;color:var(--ink-3);padding:4px 0;}
-.cal .day{text-align:center;padding:8px 0 5px;border-radius:8px;cursor:pointer;font-size:13px;min-height:44px;}
-.cal .day:hover{background:var(--bg);}
-.cal .day.today{background:var(--accent-soft);color:var(--accent-deep);font-weight:700;}
-.cal .day.sel{outline:2px solid var(--accent);}
-.dotrow{display:flex;gap:3px;justify-content:center;margin-top:3px;height:5px;}
-.dotrow span{width:5px;height:5px;border-radius:50%;}
-.cal-detail{margin-top:12px;background:var(--bg);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--ink-2);}
-.cal-detail .row{margin:2px 0;}
-.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--ink-2);}
+.card h2{font-size:18px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+.card h2 i{font-size:20px;color:var(--accent);}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal .dow{text-align:center;font-size:12px;color:var(--ink-3);padding:4px 0;}
+.cal .day{background:transparent;border:1px solid var(--line);border-radius:8px;padding:6px;min-height:74px;font-size:12.5px;}
+.cal .day .num{font-weight:600;color:var(--ink-2);margin-bottom:3px;}
+.cal .day.empty{background:transparent;border-color:transparent;}
+.cal .day.today{border:2px solid var(--accent);}
+.cal .day.today .num{color:var(--accent-deep);}
+.cal .day.holiday{border-color:#F0C2BE;}
+.cal .day.holiday .num{color:#C0392B;}
+.hol{display:block;font-size:11px;font-weight:700;color:#C0392B;line-height:1.5;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ev{display:block;font-size:11px;font-weight:600;line-height:1.5;padding:1px 5px;border-radius:5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ev-more{display:block;font-size:11px;font-weight:600;color:var(--ink-3);padding:1px 5px;}
+@media (max-width:700px){.cal .day{min-height:58px;padding:4px;}.ev{font-size:11px;padding:1px 3px;}.hol{font-size:10.5px;}}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--ink-2);}
 .legend span{display:inline-flex;align-items:center;gap:5px;}
 .legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
 .chip{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;margin-right:8px;}
-.insight{border-radius:8px;padding:12px 14px;margin-bottom:8px;}
-.insight strong{display:block;font-size:13px;margin-bottom:2px;}
-.insight p{font-size:12.5px;line-height:1.55;}
-.insight.purple{background:var(--accent-soft);}.insight.purple strong{color:var(--accent-deep);}.insight.purple p{color:#3C3489;}
-.insight.amber{background:var(--amber-soft);}.insight.amber strong{color:#412402;}.insight.amber p{color:var(--amber-deep);}
-.insight.green{background:var(--green-soft);}.insight.green strong{color:#04342C;}.insight.green p{color:var(--green-deep);}
 .staff-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 @media (max-width:600px){.staff-grid{grid-template-columns:1fr;}}
-.staff{background:var(--bg);border-radius:8px;padding:14px;}
+.staff{background:transparent;border:1px solid var(--line);border-radius:10px;padding:14px;}
 .staff .top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
 .staff .face{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;}
 .staff .nm{font-size:14px;font-weight:600;}
@@ -86,10 +84,38 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .store{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--line);font-size:13px;}
 .store .no{color:var(--ink-3);font-size:11.5px;min-width:20px;}
 .store .nm{flex:1;}
+.store-grp{margin-bottom:20px;}
+.store-grp:last-child{margin-bottom:0;}
+.store-grp-hd{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:2px solid var(--ink);margin-bottom:8px;}
+.store-grp-hd .ttl{font-size:14.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px;}
+.store-grp-hd .ttl i{font-size:17px;color:var(--accent);}
+.store-grp-hd .cnt{font-size:12px;color:var(--ink-2);}
+.store-grp-hd .cnt b{color:var(--green-deep);font-weight:700;}
 .tag{font-size:11px;font-weight:600;padding:1px 8px;border-radius:20px;}
 .tag.done{background:var(--green-soft);color:var(--green-deep);}
 .tag.plan{background:var(--accent-soft);color:var(--accent-deep);}
+.tag.miss{background:var(--amber-soft);color:var(--amber-deep);}
 .tag.none{background:var(--red-soft);color:var(--red-deep);}
+.glance-grp{margin-bottom:12px;}
+.glance-grp:last-child{margin-bottom:0;}
+.glance-hd{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--ink-2);padding-bottom:4px;border-bottom:1px solid var(--line);margin-bottom:2px;}
+.glance-hd i.dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.glance-hd .cnt{margin-left:auto;font-weight:600;font-size:11.5px;color:var(--ink-3);}
+.glance-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;border-bottom:1px dashed var(--line);}
+.glance-row:last-child{border-bottom:none;}
+.glance-row .dt{min-width:38px;font-size:12px;color:var(--ink-3);}
+.glance-row .nm{flex:1;}
+.glance-row.past{opacity:.55;}
+.sl-sub{margin-top:8px;}
+.sl-sub:first-of-type{margin-top:6px;}
+.sl-sub-hd{display:flex;align-items:center;font-size:11.5px;font-weight:700;color:var(--ink);padding:3px 0;border-bottom:1px dashed var(--line);}
+.sl-sub-hd .cnt{margin-left:auto;font-weight:600;font-size:11px;color:var(--ink-3);}
+.sl-rows{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;}
+.sl-row{padding:5px 0;font-size:12.5px;font-weight:400;color:var(--ink);border-bottom:1px dashed var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sl-row:nth-child(odd){border-right:1px solid var(--line);padding-right:12px;}
+.sl-row:nth-child(even){padding-left:12px;}
+.sl-row:nth-last-child(-n+2){border-bottom:none;}
+.glance-empty{font-size:12.5px;color:var(--ink-3);padding:5px 0;}
 footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
 </style>
 </head>
@@ -115,34 +141,32 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
 
   <section class="kpis" id="kpis"></section>
 
+  <section class="card" style="margin-bottom:14px;">
+    <h2><i class="ti ti-calendar-event"></i><span id="cal-title"></span></h2>
+    <div class="cal" id="cal"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
   <section class="grid-2">
     <div class="card">
-      <h2><i class="ti ti-calendar"></i><span id="cal-title"></span></h2>
-      <div class="cal" id="cal"></div>
-      <div class="cal-detail" id="cal-detail"></div>
-      <div class="legend" id="legend"></div>
+      <h2><i class="ti ti-list-details"></i><span id="glance-title"></span></h2>
+      <div id="glance"></div>
     </div>
     <div class="card">
-      <h2><i class="ti ti-sparkles"></i>AI 인사이트</h2>
+      <h2><i class="ti ti-sparkles"></i>AI insights</h2>
       <div id="insights"></div>
     </div>
   </section>
 
-  <section class="grid-2">
-    <div class="card">
-      <h2><i class="ti ti-users"></i>담당자 현황</h2>
-      <div class="staff-grid" id="staff"></div>
-    </div>
-    <div class="card">
-      <h2><i class="ti ti-list-check"></i>이번 달 일정 요약</h2>
-      <ul style="list-style:none;font-size:13.5px;" id="month-list"></ul>
-    </div>
+  <section class="card" style="margin-bottom:14px;">
+    <h2><i class="ti ti-users-group"></i>Team status</h2>
+    <div class="staff-grid" id="staff"></div>
   </section>
 
   <section class="card">
-    <h2><i class="ti ti-building-store"></i>매장 커버리지</h2>
+    <h2><i class="ti ti-building-store"></i>Store coverage</h2>
     <div class="stores" id="stores"></div>
-    <p style="font-size:12px;color:var(--ink-3);margin-top:10px;">일정 시트에 등록된 전체 기간 기준 · 완료/예정은 오늘 날짜로 자동 계산</p>
+    <p style="font-size:12px;color:var(--ink-3);margin-top:10px;" id="stores-note">일정 시트에 등록된 전체 기간 기준 · 완료/예정은 오늘 날짜로 자동 계산</p>
   </section>
 
   <footer>VM 라운딩 대시보드 · 구글 스프레드시트 연동</footer>
@@ -163,7 +187,36 @@ var SAMPLE_SCHEDULE = [
 ];
 var SAMPLE_STORES = ["신사점","한남점","현대백화점 신촌점","현대프리미엄 송도점","신세계백화점 광주점","포시즌아울렛 신사점","아이파크몰 용산점","커넥트현대 청주점","롯데면세점 명동본점","현대프리미엄 SPACE1","신세계백화점 의정부점","신세계백화점 대전점","롯데프리미엄 김해점","성수 플래그쉽 스토어","스타필드 고양점","롯데백화점 평촌점","스타필드빌리지 운정점","서울숲점","신세계백화점 센텀시티점","LF스퀘어 광양점","타임스퀘어 영등포점","롯데 아울렛 서울역","롯데 아쿠아몰 광복점"];
 
+/* ============================================================
+   대한민국 공휴일 (설날·추석 등 음력 공휴일은 매년 날짜가 달라져
+   자동 계산이 불가능하므로, 정부 발표(관공서의 공휴일에 관한 규정)
+   기준으로 연도별 표를 직접 채워둡니다.
+   다음 해가 오면 아래에 새 연도 블록만 추가하면 자동으로 반영됩니다.
+   형식: [월, 일, "공휴일명"]
+   ============================================================ */
+var HOLIDAYS = {
+  2026: [
+    [1,1,"신정"],
+    [2,16,"설날연휴"],[2,17,"설날"],[2,18,"설날연휴"],
+    [3,1,"삼일절"],[3,2,"대체공휴일"],
+    [5,1,"노동절"],[5,5,"어린이날"],
+    [5,24,"부처님오신날"],[5,25,"대체공휴일"],
+    [6,6,"현충일"],
+    [7,17,"제헌절"],
+    [8,15,"광복절"],[8,17,"대체공휴일"],
+    [9,24,"추석연휴"],[9,25,"추석"],[9,26,"추석연휴"],
+    [10,3,"개천절"],[10,5,"대체공휴일"],[10,9,"한글날"],
+    [12,25,"성탄절"]
+  ]
+};
+function getHoliday(Y,M,D){
+  var list=HOLIDAYS[Y]; if(!list) return null;
+  for(var i=0;i<list.length;i++){ if(list[i][0]===M&&list[i][1]===D) return list[i][2]; }
+  return null;
+}
 var dows=["일","월","화","수","목","금","토"];
+var MON_EN=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var MON_FULL=["","January","February","March","April","May","June","July","August","September","October","November","December"];
 var palette=[["#534AB7","var(--accent-soft)","var(--accent-deep)"],["#D4537E","var(--pink-soft)","var(--pink-deep)"],["#BA7517","var(--amber-soft)","var(--amber-deep)"],["#0F6E56","var(--green-soft)","var(--green-deep)"]];
 var whoStyle={};
 
@@ -189,7 +242,7 @@ function parseDate(s){
   return {y:+m[1],m:+m[2],d:+m[3]};
 }
 
-var schedule=[], storeList=[], usingSample=false;
+var schedule=[], storeList=[], reports=[], usingSample=false, useReportStatus=false;
 
 function normalize(rows){
   var out=[];
@@ -201,14 +254,66 @@ function normalize(rows){
   return out;
 }
 
+function normalizeReports(rows){
+  if(!rows.length) return [];
+  var header=rows[0].map(function(c){return (c||"").toLowerCase();});
+  function findCol(keys){
+    for(var i=0;i<header.length;i++){ for(var k=0;k<keys.length;k++){ if(header[i].indexOf(keys[k])>=0) return i; } }
+    return -1;
+  }
+  var dateCol=findCol(["방문일자","방문일","일자","date"]);
+  var storeCol=findCol(["매장명","매장","store"]);
+  var linkCol=findCol(["파일","링크","보고서","file","link"]);
+  var out=[];
+  for(var r=1;r<rows.length;r++){
+    var row=rows[r];
+    var dt=dateCol>=0?parseDate(row[dateCol]):null;
+    var store=storeCol>=0?(row[storeCol]||"").trim():"";
+    if(!dt||!store) continue;
+    out.push({y:dt.y,m:dt.m,d:dt.d,store:store,link:linkCol>=0?(row[linkCol]||"").trim():""});
+  }
+  return out;
+}
+
+function toDate(o){ return new Date(o.y,o.m-1,o.d); }
+var REPORT_MATCH_WINDOW=7;
+function matchReports(){
+  var byStore={};
+  schedule.forEach(function(e){ e._matched=false; e._report=null; if(storeList.indexOf(e.t)>=0){ (byStore[e.t]=byStore[e.t]||[]).push(e); } });
+  var reportsByStore={};
+  reports.forEach(function(r){ (reportsByStore[r.store]=reportsByStore[r.store]||[]).push(r); });
+  Object.keys(reportsByStore).forEach(function(nm){
+    var visits=(byStore[nm]||[]).slice().sort(function(a,b){return toDate(a)-toDate(b);});
+    var reps=reportsByStore[nm].slice().sort(function(a,b){return toDate(a)-toDate(b);});
+    reps.forEach(function(rep){
+      var bestIdx=-1,bestDiff=Infinity;
+      visits.forEach(function(v,idx){
+        if(v._matched) return;
+        var diff=Math.abs((toDate(rep)-toDate(v))/86400000);
+        if(diff<=REPORT_MATCH_WINDOW && diff<bestDiff){ bestDiff=diff; bestIdx=idx; }
+      });
+      if(bestIdx>=0){ visits[bestIdx]._matched=true; visits[bestIdx]._report=rep; }
+    });
+  });
+}
+function isDone(e){ return useReportStatus ? !!e._report : isPastOrToday(e); }
+function isMissing(e){ return useReportStatus ? (!e._report && isPastOrToday(e)) : false; }
+
 function setupWho(){
   whoStyle={"전체":{dot:"#1D9E75",bg:"var(--green-soft)",fg:"var(--green-deep)"},"기타":{dot:"#96949F",bg:"var(--bg)",fg:"var(--ink-2)"}};
+  var PREFERRED=["다은","민지"];
   var others=[]; schedule.forEach(function(e){ if(e.who!=="전체"&&e.who!=="기타"&&others.indexOf(e.who)<0) others.push(e.who); });
+  others.sort(function(a,b){
+    var ia=PREFERRED.indexOf(a), ib=PREFERRED.indexOf(b);
+    if(ia<0) ia=99; if(ib<0) ib=99;
+    return ia-ib;
+  });
   others.forEach(function(nm,i){ var p=palette[i%palette.length]; whoStyle[nm]={dot:p[0],bg:p[1],fg:p[2]}; });
   document.getElementById("legend").innerHTML =
-    '<span><i style="background:#1D9E75;"></i>전체 라운딩</span>'
+    '<span><i style="background:#1D9E75;"></i>공동 라운딩</span>'
     +others.map(function(nm){return '<span><i style="background:'+whoStyle[nm].dot+';"></i>'+nm+'</span>';}).join("")
-    +'<span><i style="background:#96949F;"></i>기타 일정</span>';
+    +'<span><i style="background:#96949F;"></i>기타 일정</span>'
+    +'<span><i style="background:#C0392B;"></i>공휴일</span>';
   return others;
 }
 
@@ -216,6 +321,22 @@ function chip(who){ var s=whoStyle[who]||whoStyle["기타"]; return '<span class
 
 var now=new Date(); var TY=now.getFullYear(), TM=now.getMonth()+1, TD=now.getDate();
 function isPastOrToday(e){ return e.y<TY||(e.y===TY&&(e.m<TM||(e.m===TM&&e.d<=TD))); }
+
+function quarterOf(m){ return Math.floor((m-1)/3)+1; }
+function quarterMonths(q){ var s=(q-1)*3+1; return [s,s+1,s+2]; }
+
+var quarterStats={done:0,total:0,label:"",neverVisited:[],q:1,qm:[1,2,3],Y:0};
+function computeQuarterStats(Y,M){
+  var q=quarterOf(M), qm=quarterMonths(q);
+  var inQuarter=function(e){ return e.y===Y && qm.indexOf(e.m)>=0; };
+  var visitedStores={};
+  schedule.forEach(function(e){ if(storeList.indexOf(e.t)>=0 && inQuarter(e) && isDone(e)) visitedStores[e.t]=true; });
+  quarterStats.total=storeList.length;
+  quarterStats.done=Object.keys(visitedStores).length;
+  quarterStats.label=Y+"년 "+q+"분기 ("+qm[0]+"~"+qm[2]+"월)";
+  quarterStats.q=q; quarterStats.qm=qm; quarterStats.Y=Y;
+  quarterStats.neverVisited=storeList.filter(function(nm){ return !schedule.some(function(e){ return e.t===nm && inQuarter(e); }); });
+}
 
 function render(){
   var others=setupWho();
@@ -230,48 +351,48 @@ function render(){
   var staffNames=others.length?others:["담당자"];
   document.getElementById("subtitle").textContent="VM팀 "+staffNames.join(" · ")+" · 담당 "+storeList.length+"개 매장";
 
-  renderInsights();
   renderStores();
   renderMonth(sel.value);
 }
 
 function renderMonth(key){
   var p=key.split("-"),Y=+p[0],M=+p[1];
+  computeQuarterStats(Y,M);
+  renderInsights();
   var evs=schedule.filter(function(e){return e.y===Y&&e.m===M;});
   var visits=evs.filter(function(e){return storeList.indexOf(e.t)>=0;});
-  var done=visits.filter(isPastOrToday).length;
+  var done=visits.filter(isDone).length;
   var pct=visits.length?Math.round(done/visits.length*100):0;
   var etc=evs.filter(function(e){return e.who==="기타";}).length;
-  var neverVisited=storeList.filter(function(nm){return !schedule.some(function(e){return e.t===nm;});});
+  var neverVisited=quarterStats.neverVisited;
 
-  document.getElementById("cal-title").textContent="라운딩 캘린더 · "+Y+"년 "+M+"월";
+  document.getElementById("cal-title").textContent="Rounding calendar · "+MON_FULL[M]+" "+Y;
   document.getElementById("kpis").innerHTML=
     '<div class="kpi"><div class="lbl">이달 라운딩</div><div class="val">'+done+' / '+visits.length+'개소</div><div class="bar"><span style="width:'+pct+'%;"></span></div><div class="sub">진행률 '+pct+'%</div></div>'
-    +'<div class="kpi"><div class="lbl">담당 매장</div><div class="val">'+storeList.length+'개</div><div class="sub">매장 목록 시트 기준</div></div>'
-    +'<div class="kpi"><div class="lbl">미방문 매장</div><div class="val">'+neverVisited.length+'개소</div><div class="sub'+(neverVisited.length?' bad':'')+'">'+(neverVisited.length?'등록 기간 내 일정 없음':'모든 매장 일정 있음')+'</div></div>'
+    +'<div class="kpi"><div class="lbl">분기 진행률 ('+quarterStats.label+')</div><div class="val">'+Math.round(quarterStats.total?quarterStats.done/quarterStats.total*100:0)+'%</div><div class="bar"><span style="width:'+(quarterStats.total?Math.round(quarterStats.done/quarterStats.total*100):0)+'%;background:#534AB7;"></span></div><div class="sub">'+quarterStats.done+' / '+quarterStats.total+'개소 완료</div></div>'
+    +'<div class="kpi"><div class="lbl">분기 내 미방문</div><div class="val">'+neverVisited.length+'개소</div><div class="sub'+(neverVisited.length?' bad':'')+'">'+(neverVisited.length?quarterStats.label+' 일정 없음':'분기 내 모든 매장 일정 있음')+'</div></div>'
     +'<div class="kpi"><div class="lbl">이달 기타 일정</div><div class="val">'+etc+'건</div><div class="sub">휴무·행사·오픈 포함</div></div>';
 
   var byDay={}; evs.forEach(function(e){(byDay[e.d]=byDay[e.d]||[]).push(e);});
   var start=new Date(Y,M-1,1).getDay(), days=new Date(Y,M,0).getDate();
   var html="";
   for(var i=0;i<7;i++)html+='<div class="dow">'+dows[i]+'</div>';
-  for(var b=0;b<start;b++)html+='<div></div>';
+  for(var b=0;b<start;b++)html+='<div class="day empty"></div>';
   for(var d=1;d<=days;d++){
     var today=(Y===TY&&M===TM&&d===TD);
-    html+='<div class="day'+(today?' today':'')+'" data-day="'+d+'">'+d+'<div class="dotrow">'
-      +(byDay[d]||[]).map(function(e){return '<span style="background:'+(whoStyle[e.who]||whoStyle["기타"]).dot+';"></span>';}).join("")
-      +'</div></div>';
+    var hol=getHoliday(Y,M,d);
+    var list=byDay[d]||[];
+    var shown=list.slice(0,2), rest=list.length-shown.length;
+    html+='<div class="day'+(today?' today':'')+(hol?' holiday':'')+'"><div class="num">'+d+'</div>'
+      +(hol?'<span class="hol" title="'+hol+'">'+hol+'</span>':'')
+      +shown.map(function(e){
+        var s=whoStyle[e.who]||whoStyle["기타"];
+        return '<span class="ev" style="background:'+s.bg+';color:'+s.fg+';" title="'+e.t+'">'+e.t+'</span>';
+      }).join("")
+      +(rest>0?'<span class="ev-more">+'+rest+'개</span>':'')
+      +'</div>';
   }
   var cal=document.getElementById("cal"); cal.innerHTML=html;
-  var detail=document.getElementById("cal-detail");
-  function showDay(d){
-    document.querySelectorAll(".cal .day").forEach(function(el){el.classList.toggle("sel",el.getAttribute("data-day")==String(d));});
-    var list=byDay[d];
-    if(!list){detail.textContent=M+"월 "+d+"일 · 등록된 일정이 없습니다.";return;}
-    detail.innerHTML=list.map(function(e){return '<div class="row">'+chip(e.who)+'<span style="color:var(--ink);">'+M+'월 '+e.d+'일 · '+e.t+'</span></div>';}).join("");
-  }
-  cal.onclick=function(ev){var c=ev.target.closest("[data-day]");if(c)showDay(+c.getAttribute("data-day"));};
-  showDay((Y===TY&&M===TM)?TD:(evs[0]?evs[0].d:1));
 
   var names=Object.keys(whoStyle).filter(function(k){return k!=="전체"&&k!=="기타";});
   document.getElementById("staff").innerHTML=names.map(function(nm){
@@ -279,48 +400,157 @@ function renderMonth(key){
     var team=evs.filter(function(e){return e.who==="전체";}).length;
     var s=whoStyle[nm];
     return '<div class="staff"><div class="top"><span class="face" style="background:'+s.bg+';color:'+s.fg+';">'+nm.slice(0,2)+'</span>'
-      +'<div><div class="nm">'+nm+'</div><div class="tm">이달 방문 '+(own.length+team)+'회 (단독 '+own.length+' · 전체 '+team+')</div></div></div>'
-      +'<ul>'+(own.length?own.map(function(e){return '<li>'+M+'/'+e.d+' · <b>'+e.t+'</b> 단독</li>';}).join(""):'<li>단독 배정 없음 · 전체 라운딩 참여</li>')+'</ul></div>';
+      +'<div><div class="nm">'+nm+'</div><div class="tm">이달 방문 '+(own.length+team)+'회 ('+nm+' '+own.length+' · 공동 '+team+')</div></div></div>'
+      +'<ul>'+(own.length?own.map(function(e){return '<li>'+M+'/'+e.d+' · <b>'+e.t+'</b></li>';}).join(""):'<li>'+nm+' 단독 일정 없음 · 공동 라운딩만 참여</li>')+'</ul></div>';
   }).join("")||'<p style="font-size:13px;color:var(--ink-3);">구분 열에 담당자 이름을 입력하면 표시됩니다.</p>';
 
-  document.getElementById("month-list").innerHTML=evs.map(function(e){
-    var isStore=storeList.indexOf(e.t)>=0, past=isPastOrToday(e);
-    return '<li style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);'+(past?'opacity:.55;':'')+'">'
-      +'<span style="min-width:44px;font-size:12px;color:var(--ink-3);">'+M+'/'+e.d+'</span>'+chip(e.who)
-      +'<span style="flex:1;">'+e.t+'</span>'
-      +(isStore?('<span class="tag '+(past?'done">완료':'plan">예정')+'</span>'):'')
-      +'</li>';
-  }).join("")||'<li style="font-size:13px;color:var(--ink-3);">이달 일정이 없습니다.</li>';
+  document.getElementById("glance-title").textContent="Schedule Overview";
+  function etcTag(t){
+    if(/오픈/.test(t)) return '<span class="tag" style="background:var(--amber-soft);color:var(--amber-deep);">오픈</span>';
+    if(/연차|휴무|대휴|경조|패밀리/.test(t)) return '<span class="tag" style="background:var(--bg);color:var(--ink-2);">휴무</span>';
+    return '<span class="tag" style="background:var(--bg);color:var(--ink-2);">행사</span>';
+  }
+  function rows(list,isEtc){
+    if(!list.length) return '<div class="glance-empty">일정 없음</div>';
+    return list.map(function(e){
+      var past=isPastOrToday(e), isStore=storeList.indexOf(e.t)>=0;
+      var tag=isEtc?etcTag(e.t):(isStore?('<span class="tag '+(isDone(e)?'done">완료':(isMissing(e)?'miss">미완료':'plan">예정'))+'</span>'):'');
+      return '<div class="glance-row'+(past&&isDone(e)?' past':'')+'"><span class="dt">'+M+'/'+e.d+'</span><span class="nm">'+e.t+'</span>'+tag+'</div>';
+    }).join("");
+  }
+  var g='';
+  var team=evs.filter(function(e){return e.who==="전체";});
+  g+='<div class="glance-grp"><div class="glance-hd"><i class="dot" style="background:#1D9E75;"></i>공동 라운딩<span class="cnt">'+team.length+'건</span></div>'+rows(team,false)+'</div>';
+  names.forEach(function(nm){
+    var own=evs.filter(function(e){return e.who===nm;});
+    g+='<div class="glance-grp"><div class="glance-hd"><i class="dot" style="background:'+whoStyle[nm].dot+';"></i>'+nm+'<span class="cnt">'+own.length+'건</span></div>'+rows(own,false)+'</div>';
+  });
+  var etc=evs.filter(function(e){return e.who==="기타";});
+  g+='<div class="glance-grp"><div class="glance-hd"><i class="dot" style="background:#96949F;"></i>기타 일정 · 이슈<span class="cnt">'+etc.length+'건</span></div>'+rows(etc,true)+'</div>';
+  document.getElementById("glance").innerHTML=g;
 }
 
+/* 매장형태 기준표 (제공된 매장형태 표 기준, 층/구분 정보는 형태 판단에만 사용) */
+var STORE_TYPE_MAP={
+  "신사점":"로드샵",
+  "한남점":"로드샵",
+  "성수 플래그쉽 스토어":"로드샵",
+  "서울숲점":"로드샵",
+  "현대백화점 신촌점":"백화점",
+  "신세계백화점 광주점":"백화점",
+  "아이파크몰 용산점":"쇼핑몰",
+  "커넥트현대 청주점":"쇼핑몰",
+  "롯데면세점 명동본점":"백화점",
+  "신세계백화점 의정부점":"백화점",
+  "신세계백화점 대전점":"백화점",
+  "롯데백화점 평촌점":"백화점",
+  "스타필드 고양점":"쇼핑몰",
+  "신세계백화점 센텀시티점":"백화점",
+  "타임스퀘어 영등포점":"쇼핑몰",
+  "롯데 아쿠아몰 광복점":"백화점",
+  "현대프리미엄 송도점":"아울렛",
+  "포시즌아울렛 신사점":"로드샵",
+  "현대프리미엄 SPACE1":"아울렛",
+  "롯데프리미엄 김해점":"아울렛",
+  "스타필드빌리지 운정점":"쇼핑몰",
+  "LF스퀘어 광양점":"쇼핑몰",
+  "롯데 아울렛 서울역":"아울렛"
+};
+function storeType(nm){
+  if(STORE_TYPE_MAP[nm]) return STORE_TYPE_MAP[nm];
+  if(/포시즌아울렛/.test(nm)) return "로드샵";
+  if(/아울렛|아웃렛/.test(nm)) return "아울렛";
+  if(/백화점/.test(nm)) return "백화점";
+  if(/몰|스퀘어|스타필드|아이파크|커넥트/.test(nm)) return "쇼핑몰";
+  return "로드샵";
+}
+var TYPE_ORDER=["로드샵","백화점","쇼핑몰","아울렛"];
+
+function donutColor(pct){ if(pct>=80) return "#1D9E75"; if(pct>=40) return "#534AB7"; return "#BA7517"; }
+
+function donutSVG(pct,done,total){
+  var r=50,c2=2*Math.PI*r,off=c2*(1-pct/100),color=donutColor(pct);
+  var ticks=[0,25,50,75].map(function(t){
+    var ang=(t/100)*2*Math.PI-Math.PI/2;
+    var x1=64+(r-10)*Math.cos(ang), y1=64+(r-10)*Math.sin(ang);
+    var x2=64+(r+10)*Math.cos(ang), y2=64+(r+10)*Math.sin(ang);
+    return '<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="var(--card)" stroke-width="2"></line>';
+  }).join("");
+  return '<svg viewBox="0 0 128 128" width="112" height="112" style="flex-shrink:0;">'
+    +'<circle cx="64" cy="64" r="'+r+'" fill="none" stroke="var(--bg)" stroke-width="15"></circle>'
+    +'<circle cx="64" cy="64" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="15" stroke-linecap="round" stroke-dasharray="'+c2.toFixed(2)+'" stroke-dashoffset="'+off.toFixed(2)+'" transform="rotate(-90 64 64)"></circle>'
+    +ticks
+    +'<text x="64" y="61" text-anchor="middle" font-size="24" font-weight="700" fill="var(--ink)">'+pct+'%</text>'
+    +'<text x="64" y="78" text-anchor="middle" font-size="10.5" fill="var(--ink-3)">'+done+' / '+total+' stores</text>'
+    +'</svg>';
+}
+
+function startOfWeek(d){ var day=d.getDay(); var diff=(day===0?-6:1-day); var r=new Date(d.getFullYear(),d.getMonth(),d.getDate()+diff); return r; }
+function fromDate(d){ return {y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate()}; }
+
 function renderInsights(){
-  var neverVisited=storeList.filter(function(nm){return !schedule.some(function(e){return e.t===nm;});});
-  var upcoming=schedule.filter(function(e){return !isPastOrToday(e)&&storeList.indexOf(e.t)>=0;});
-  var next=upcoming[0];
+  var neverVisited=quarterStats.neverVisited;
+  var qPct=quarterStats.total?Math.round(quarterStats.done/quarterStats.total*100):0;
   var html="";
+
+  html+='<div class="glance-grp"><div class="glance-hd"><i class="dot" style="background:'+donutColor(qPct)+';"></i>Quarter progress · '+quarterStats.label+'<span class="cnt">'+quarterStats.done+'/'+quarterStats.total+'</span></div>'
+    +'<div style="display:flex;align-items:center;gap:16px;padding:10px 0 4px;">'
+    +donutSVG(qPct,quarterStats.done,quarterStats.total)
+    +'<div style="font-size:13px;color:var(--ink-2);"><p style="margin:0;">전체 <b style="color:var(--ink);">'+quarterStats.total+'개소</b> 중</p><p style="margin:3px 0 0;"><b style="color:var(--ink);">'+quarterStats.done+'개소</b> 라운딩 완료</p></div>'
+    +'</div></div>';
+
   if(neverVisited.length){
-    html+='<div class="insight amber"><strong>미방문 매장 '+neverVisited.length+'곳</strong><p>'+neverVisited.join(", ")+' 매장이 등록된 일정에 없어요. 다음 스케줄에 반영을 검토하세요.</p></div>';
+    var grp={}; neverVisited.forEach(function(nm){ var t=storeType(nm); (grp[t]=grp[t]||[]).push(nm); });
+    html+='<div class="glance-grp"><div class="glance-hd"><i class="dot" style="background:#BA7517;"></i>'+quarterStats.q+'분기('+quarterStats.qm[0]+'-'+quarterStats.qm[2]+'월) 미방문 매장<span class="cnt">'+neverVisited.length+'건</span></div>'
+      +TYPE_ORDER.filter(function(t){return grp[t]&&grp[t].length;}).map(function(t){
+        return '<div class="sl-sub"><div class="sl-sub-hd">'+t+'<span class="cnt">'+grp[t].length+'</span></div>'
+          +'<div class="sl-rows">'+grp[t].map(function(nm){return '<div class="sl-row">'+nm+'</div>';}).join("")+'</div>'
+          +'</div>';
+      }).join("")
+      +'</div>';
   }else{
-    html+='<div class="insight green"><strong>커버리지 달성</strong><p>모든 담당 매장에 방문 일정이 등록되어 있어요.</p></div>';
+    html+='<div class="glance-grp"><div class="glance-hd"><i class="dot" style="background:#1D9E75;"></i>Quarter coverage complete</div>'
+      +'<div class="glance-row" style="border-bottom:none;">'+quarterStats.label+' 안에 모든 담당 매장 방문 일정이 등록되어 있어요.</div></div>';
   }
-  if(next){
-    html+='<div class="insight purple"><strong>다음 라운딩</strong><p>'+next.m+'월 '+next.d+'일 '+next.t+' ('+next.who+') 방문이 예정되어 있어요.</p></div>';
-  }
-  var total=schedule.filter(function(e){return storeList.indexOf(e.t)>=0;}).length;
-  var doneAll=schedule.filter(function(e){return storeList.indexOf(e.t)>=0&&isPastOrToday(e);}).length;
-  html+='<div class="insight green"><strong>누적 진행 현황</strong><p>등록 기간 전체 기준 '+doneAll+' / '+total+'개소 라운딩을 완료했어요.</p></div>';
+
+  var weekStart=startOfWeek(new Date(TY,TM-1,TD));
+  var weekEnd=new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate()+6);
+  var thisWeek=schedule.filter(function(e){
+    if(storeList.indexOf(e.t)<0) return false;
+    var dt=toDate(e);
+    return dt>=weekStart && dt<=weekEnd;
+  }).sort(function(a,b){return toDate(a)-toDate(b);});
+  var wsL=fromDate(weekStart), weL=fromDate(weekEnd);
+  html+='<div class="glance-grp"><div class="glance-hd"><i class="dot" style="background:#534AB7;"></i>This week\u2019s rounding · '+wsL.m+'/'+wsL.d+'-'+weL.m+'/'+weL.d+'<span class="cnt">'+thisWeek.length+'건</span></div>'
+    +(thisWeek.length?thisWeek.map(function(e){
+      var tagCls=isDone(e)?'done">완료':(isMissing(e)?'miss">미완료':'plan">예정');
+      return '<div class="glance-row"><span class="dt">'+e.m+'/'+e.d+'</span><span class="nm"><b>'+e.t+'</b> · '+e.who+'</span><span class="tag '+tagCls+'</span></div>';
+    }).join(""):'<div class="glance-empty">이번 주 예정된 매장 방문이 없어요.</div>')
+    +'</div>';
+
   document.getElementById("insights").innerHTML=html;
 }
 
+var TYPE_ICON={"로드샵":"ti-building-store","백화점":"ti-building","쇼핑몰":"ti-shopping-cart","아울렛":"ti-tag"};
+
 function renderStores(){
   var visitMap={};
-  schedule.forEach(function(e){ if(storeList.indexOf(e.t)>=0){ if(!visitMap[e.t]||!isPastOrToday(e)) visitMap[e.t]=e; } });
-  document.getElementById("stores").innerHTML=storeList.map(function(nm,i){
-    var v=visitMap[nm],tag;
-    if(!v)tag='<span class="tag none">미방문</span>';
-    else if(isPastOrToday(v))tag='<span class="tag done">'+v.m+'/'+v.d+' 완료</span>';
-    else tag='<span class="tag plan">'+v.m+'/'+v.d+' 예정</span>';
-    return '<div class="store"><span class="no">'+(i+1)+'</span><span class="nm">'+nm+'</span>'+tag+'</div>';
+  schedule.forEach(function(e){ if(storeList.indexOf(e.t)>=0){ visitMap[e.t]=e; } });
+  var grp={}; storeList.forEach(function(nm){ var t=storeType(nm); (grp[t]=grp[t]||[]).push(nm); });
+  document.getElementById("stores").innerHTML=TYPE_ORDER.filter(function(t){return grp[t]&&grp[t].length;}).map(function(t){
+    var list=grp[t];
+    var doneCnt=list.filter(function(nm){var v=visitMap[nm];return v&&isDone(v);}).length;
+    var rows=list.map(function(nm){
+      var v=visitMap[nm],tag;
+      if(!v)tag='<span class="tag none">미방문</span>';
+      else if(isDone(v))tag='<span class="tag done">'+v.m+'/'+v.d+' 완료</span>';
+      else if(isMissing(v))tag='<span class="tag miss">'+v.m+'/'+v.d+' 미완료</span>';
+      else tag='<span class="tag plan">'+v.m+'/'+v.d+' 예정</span>';
+      return '<div class="store"><span class="nm">'+nm+'</span>'+tag+'</div>';
+    }).join("");
+    return '<div class="store-grp"><div class="store-grp-hd"><span class="ttl"><i class="ti '+(TYPE_ICON[t]||'ti-building-store')+'"></i>'+t+'</span>'
+      +'<span class="cnt"><b>'+doneCnt+'</b> / '+list.length+' 완료</span></div>'
+      +'<div class="stores">'+rows+'</div></div>';
   }).join("");
 }
 
@@ -340,10 +570,14 @@ function init(){
   if(STORES_CSV_URL){ jobs.push(loadCSV(STORES_CSV_URL).then(function(rows){
     storeList=rows.filter(function(r,i){return !(i===0&&/번호|매장/.test(r.join()));}).map(function(r){return (r[1]||r[0]||"").trim();}).filter(Boolean);
   })); }
+  if(REPORTS_CSV_URL){ jobs.push(loadCSV(REPORTS_CSV_URL).then(function(rows){ reports=normalizeReports(rows); useReportStatus=true; }).catch(function(){ useReportStatus=false; })); }
   Promise.all(jobs).then(function(){
     if(!schedule.length){ usingSample=true; schedule=normalize(SAMPLE_SCHEDULE.map(function(r){return r;})); }
     if(!storeList.length){ storeList=SAMPLE_STORES.slice(); }
     schedule.sort(function(a,b){return (a.y-b.y)||(a.m-b.m)||(a.d-b.d);});
+    matchReports();
+    var note=document.getElementById("stores-note");
+    if(note){ note.textContent=useReportStatus?"완료는 라운딩 보고서 제출 기준 · 지난 일정인데 보고서가 없으면 미완료로 표시됩니다":"일정 시트에 등록된 전체 기간 기준 · 완료/예정은 오늘 날짜로 자동 계산 (보고서 시트를 연결하면 실제 제출 여부로 판정됩니다)"; }
     if(usingSample&&!SCHEDULE_CSV_URL){
       document.getElementById("notice").innerHTML='<div class="notice"><i class="ti ti-info-circle" style="vertical-align:-2px;"></i> 아직 스프레드시트가 연결되지 않아 내장 샘플 데이터를 표시하고 있어요. 파일 상단의 SCHEDULE_CSV_URL에 게시 주소를 입력하세요.</div>';
       setSync(false,"샘플 데이터");
@@ -354,6 +588,7 @@ function init(){
   }).catch(function(err){
     usingSample=true; schedule=normalize(SAMPLE_SCHEDULE); storeList=SAMPLE_STORES.slice();
     schedule.sort(function(a,b){return (a.y-b.y)||(a.m-b.m)||(a.d-b.d);});
+    matchReports();
     document.getElementById("notice").innerHTML='<div class="notice"><i class="ti ti-alert-circle" style="vertical-align:-2px;"></i> 스프레드시트를 불러오지 못해 샘플 데이터를 표시합니다. 게시 주소와 "웹에 게시" 설정을 확인하세요.</div>';
     setSync(false,"연동 실패 · 샘플 표시");
     render();
