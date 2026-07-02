@@ -66,6 +66,10 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .ev-more{display:block;font-size:11px;font-weight:600;color:var(--ink-3);padding:1px 5px;}
 @media (max-width:700px){.cal .day{min-height:58px;padding:4px;}.ev{font-size:11px;padding:1px 3px;}.hol{font-size:10.5px;}}
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--ink-2);}
+.tabs{display:flex;gap:4px;padding:0 20px;max-width:1080px;margin:0 auto;}
+.tab-btn{font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink-3);background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 6px;cursor:pointer;margin-right:14px;}
+.tab-btn.active{color:var(--ink);border-bottom-color:var(--accent);}
+.tab-btn:hover{color:var(--ink);}
 .legend span{display:inline-flex;align-items:center;gap:5px;}
 .legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
 .chip{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;margin-right:8px;}
@@ -116,6 +120,26 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .sl-row:nth-child(even){padding-left:12px;}
 .sl-row:nth-last-child(-n+2){border-bottom:none;}
 .glance-empty{font-size:12.5px;color:var(--ink-3);padding:5px 0;}
+.ss-list{max-height:640px;overflow-y:auto;}
+.ss-item{display:flex;align-items:center;gap:10px;padding:9px 8px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:8px;}
+.ss-item:hover{background:var(--bg);}
+.ss-item.active{background:var(--accent-soft);}
+.ss-item .ss-nm{flex:1;font-size:13.5px;color:var(--ink);}
+.ss-item.active .ss-nm{color:var(--accent-deep);font-weight:600;}
+.ss-item .ss-type{font-size:11px;color:var(--ink-3);min-width:44px;}
+.ss-detail-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 20px;color:var(--ink-3);}
+.ss-detail-empty i{font-size:32px;margin-bottom:10px;}
+.ss-detail-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.ss-detail-hd h3{font-size:17px;font-weight:700;color:var(--ink);}
+.ss-detail-hd .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px;}
+.ss-report{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px;}
+.ss-report .rhd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.ss-report .rhd .rdt{font-size:12.5px;font-weight:700;color:var(--ink);}
+.ss-report .rlink{font-size:12.5px;font-weight:600;color:var(--text-accent,var(--accent));text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
+.ss-summary{background:var(--bg);border-radius:8px;padding:12px 14px;margin-top:8px;}
+.ss-summary .lbl{font-size:11.5px;font-weight:700;color:var(--accent-deep);display:flex;align-items:center;gap:5px;margin-bottom:5px;}
+.ss-summary p{font-size:13px;line-height:1.7;color:var(--ink-2);}
+.ss-summary.empty p{color:var(--ink-3);font-style:normal;}
 footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
 </style>
 </head>
@@ -127,8 +151,12 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
     <span class="sync" id="sync"><i class="ti ti-cloud"></i>데이터 불러오는 중…</span>
   </div>
 </nav>
+<div class="tabs">
+  <button class="tab-btn active" id="tab-dashboard" data-page="dashboard">Dashboard</button>
+  <button class="tab-btn" id="tab-store-status" data-page="store-status">매장별 라운딩현황</button>
+</div>
 
-<div class="wrap">
+<div class="wrap" id="page-dashboard">
   <div id="notice"></div>
 
   <div class="page-head">
@@ -168,7 +196,31 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
     <div class="stores" id="stores"></div>
     <p style="font-size:12px;color:var(--ink-3);margin-top:10px;" id="stores-note">일정 시트에 등록된 전체 기간 기준 · 완료/예정은 오늘 날짜로 자동 계산</p>
   </section>
+</div>
 
+<div class="wrap" id="page-store-status" style="display:none;">
+  <div class="page-head">
+    <div>
+      <h1>매장별 라운딩현황</h1>
+      <p>매장을 선택하면 제출된 라운딩 보고서와 매장 피드백 요약을 볼 수 있어요.</p>
+    </div>
+  </div>
+
+  <section class="grid-2" style="align-items:start;grid-template-columns:1fr 1.6fr;">
+    <div class="card">
+      <h2><i class="ti ti-building-store"></i>Stores</h2>
+      <div class="ss-list" id="ss-list"></div>
+    </div>
+    <div class="card" id="ss-detail-wrap">
+      <div class="ss-detail-empty" id="ss-detail">
+        <i class="ti ti-file-search"></i>
+        <p>왼쪽에서 매장을 선택해 주세요.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="wrap">
   <footer>VM 라운딩 대시보드 · 구글 스프레드시트 연동</footer>
 </div>
 
@@ -264,13 +316,14 @@ function normalizeReports(rows){
   var dateCol=findCol(["방문일자","방문일","일자","date"]);
   var storeCol=findCol(["매장명","매장","store"]);
   var linkCol=findCol(["파일","링크","보고서","file","link"]);
+  var sumCol=findCol(["피드백","요약","의견","코멘트","summary","feedback"]);
   var out=[];
   for(var r=1;r<rows.length;r++){
     var row=rows[r];
     var dt=dateCol>=0?parseDate(row[dateCol]):null;
     var store=storeCol>=0?(row[storeCol]||"").trim():"";
     if(!dt||!store) continue;
-    out.push({y:dt.y,m:dt.m,d:dt.d,store:store,link:linkCol>=0?(row[linkCol]||"").trim():""});
+    out.push({y:dt.y,m:dt.m,d:dt.d,store:store,link:linkCol>=0?(row[linkCol]||"").trim():"",summary:sumCol>=0?(row[sumCol]||"").trim():""});
   }
   return out;
 }
@@ -296,8 +349,20 @@ function matchReports(){
     });
   });
 }
-function isDone(e){ return useReportStatus ? !!e._report : isPastOrToday(e); }
-function isMissing(e){ return useReportStatus ? (!e._report && isPastOrToday(e)) : false; }
+/* 2026-07-01부터 "보고서 제출 기준 완료"를 적용합니다.
+   그 이전(5~6월) 일정은 보고서 제도가 없었으므로 날짜 경과 기준으로 자동 완료 처리합니다. */
+var REPORT_CUTOFF={y:2026,m:7,d:1};
+function beforeCutoff(e){ return toDate(e) < toDate(REPORT_CUTOFF); }
+function isDone(e){
+  if(!useReportStatus) return isPastOrToday(e);
+  if(beforeCutoff(e)) return isPastOrToday(e);
+  return !!e._report;
+}
+function isMissing(e){
+  if(!useReportStatus) return false;
+  if(beforeCutoff(e)) return false;
+  return (!e._report && isPastOrToday(e));
+}
 
 function setupWho(){
   whoStyle={"전체":{dot:"#1D9E75",bg:"var(--green-soft)",fg:"var(--green-deep)"},"기타":{dot:"#96949F",bg:"var(--bg)",fg:"var(--ink-2)"}};
@@ -352,6 +417,8 @@ function render(){
   document.getElementById("subtitle").textContent="VM팀 "+staffNames.join(" · ")+" · 담당 "+storeList.length+"개 매장";
 
   renderStores();
+  if(selectedStore===null && storeList.indexOf("신사점")>=0){ selectedStore="신사점"; }
+  renderStoreStatusPage();
   renderMonth(sel.value);
 }
 
@@ -533,20 +600,25 @@ function renderInsights(){
 
 var TYPE_ICON={"로드샵":"ti-building-store","백화점":"ti-building","쇼핑몰":"ti-shopping-cart","아울렛":"ti-tag"};
 
+function latestVisit(nm){
+  var v=null;
+  schedule.forEach(function(e){ if(e.t===nm) v=e; });
+  return v;
+}
+function statusTagHTML(v,withDate){
+  if(!v) return '<span class="tag none">미방문</span>';
+  if(isDone(v)) return '<span class="tag done">'+(withDate?v.m+'/'+v.d+' ':'')+'완료</span>';
+  if(isMissing(v)) return '<span class="tag miss">'+(withDate?v.m+'/'+v.d+' ':'')+'미완료</span>';
+  return '<span class="tag plan">'+(withDate?v.m+'/'+v.d+' ':'')+'예정</span>';
+}
+
 function renderStores(){
-  var visitMap={};
-  schedule.forEach(function(e){ if(storeList.indexOf(e.t)>=0){ visitMap[e.t]=e; } });
   var grp={}; storeList.forEach(function(nm){ var t=storeType(nm); (grp[t]=grp[t]||[]).push(nm); });
   document.getElementById("stores").innerHTML=TYPE_ORDER.filter(function(t){return grp[t]&&grp[t].length;}).map(function(t){
     var list=grp[t];
-    var doneCnt=list.filter(function(nm){var v=visitMap[nm];return v&&isDone(v);}).length;
+    var doneCnt=list.filter(function(nm){var v=latestVisit(nm);return v&&isDone(v);}).length;
     var rows=list.map(function(nm){
-      var v=visitMap[nm],tag;
-      if(!v)tag='<span class="tag none">미방문</span>';
-      else if(isDone(v))tag='<span class="tag done">'+v.m+'/'+v.d+' 완료</span>';
-      else if(isMissing(v))tag='<span class="tag miss">'+v.m+'/'+v.d+' 미완료</span>';
-      else tag='<span class="tag plan">'+v.m+'/'+v.d+' 예정</span>';
-      return '<div class="store"><span class="nm">'+nm+'</span>'+tag+'</div>';
+      return '<div class="store"><span class="nm">'+nm+'</span>'+statusTagHTML(latestVisit(nm),true)+'</div>';
     }).join("");
     return '<div class="store-grp"><div class="store-grp-hd"><span class="ttl"><i class="ti '+(TYPE_ICON[t]||'ti-building-store')+'"></i>'+t+'</span>'
       +'<span class="cnt"><b>'+doneCnt+'</b> / '+list.length+' 완료</span></div>'
@@ -554,14 +626,73 @@ function renderStores(){
   }).join("");
 }
 
+var selectedStore=null;
+function renderStoreStatusPage(){
+  var grp={}; storeList.forEach(function(nm){ var t=storeType(nm); (grp[t]=grp[t]||[]).push(nm); });
+  var html=TYPE_ORDER.filter(function(t){return grp[t]&&grp[t].length;}).map(function(t){
+    return '<div class="sl-sub"><div class="sl-sub-hd">'+t+'<span class="cnt">'+grp[t].length+'</span></div>'
+      +grp[t].map(function(nm){
+        var repCount=reports.filter(function(r){return r.store===nm;}).length;
+        return '<div class="ss-item'+(selectedStore===nm?' active':'')+'" data-store="'+nm.replace(/"/g,"&quot;")+'">'
+          +'<span class="ss-nm">'+nm+'</span>'
+          +(repCount?'<span class="ss-type"><i class="ti ti-file-text" style="font-size:13px;vertical-align:-2px;"></i> '+repCount+'</span>':'')
+          +statusTagHTML(latestVisit(nm),false)
+          +'</div>';
+      }).join("")
+      +'</div>';
+  }).join("");
+  document.getElementById("ss-list").innerHTML=html;
+  if(selectedStore) showStoreDetail(selectedStore);
+}
+
+function showStoreDetail(nm){
+  selectedStore=nm;
+  document.querySelectorAll(".ss-item").forEach(function(el){ el.classList.toggle("active", el.getAttribute("data-store")===nm); });
+  var v=latestVisit(nm);
+  var myReports=reports.filter(function(r){return r.store===nm;}).sort(function(a,b){return toDate(b)-toDate(a);});
+  var t=storeType(nm);
+  var html='<div class="ss-detail-hd"><div><h3>'+nm+'</h3><div class="sub">'+t+' · '+(v?v.m+'/'+v.d+' 최근 일정':'등록된 일정 없음')+'</div></div>'+statusTagHTML(v,true)+'</div>';
+  if(!myReports.length){
+    html+='<div class="ss-summary empty"><div class="lbl"><i class="ti ti-file-off"></i>제출된 보고서 없음</div><p>이 매장은 아직 라운딩 보고서가 등록되지 않았어요. 구글 폼으로 보고서를 제출하면 여기에 자동으로 표시됩니다.</p></div>';
+  }else{
+    html+=myReports.map(function(r){
+      return '<div class="ss-report"><div class="rhd"><span class="rdt">'+r.m+'/'+r.d+' 제출</span>'
+        +(r.link?'<a class="rlink" href="'+r.link+'" target="_blank" rel="noopener"><i class="ti ti-external-link"></i>보고서 열기</a>':'')
+        +'</div>'
+        +(r.summary?'<div class="ss-summary"><div class="lbl"><i class="ti ti-sparkles"></i>AI 매장 피드백 요약</div><p>'+r.summary+'</p></div>'
+          :'<div class="ss-summary empty"><div class="lbl"><i class="ti ti-sparkles"></i>AI 매장 피드백 요약</div><p>아직 요약이 등록되지 않았어요. 보고서를 공유해 주시면 마지막 페이지 매장 피드백을 분석해서 채워드릴게요.</p></div>');
+    }).join("");
+  }
+  document.getElementById("ss-detail-wrap").innerHTML=html;
+}
+
+document.addEventListener("click",function(e){
+  var item=e.target.closest(".ss-item");
+  if(item){ showStoreDetail(item.getAttribute("data-store")); }
+  var tabBtn=e.target.closest(".tab-btn");
+  if(tabBtn){
+    document.querySelectorAll(".tab-btn").forEach(function(b){b.classList.toggle("active",b===tabBtn);});
+    var page=tabBtn.getAttribute("data-page");
+    document.getElementById("page-dashboard").style.display=(page==="dashboard")?"":"none";
+    document.getElementById("page-store-status").style.display=(page==="store-status")?"":"none";
+  }
+});
+
 function setSync(ok,msg){
   var el=document.getElementById("sync");
   el.className="sync"+(ok?" on":"");
   el.innerHTML='<i class="ti ti-'+(ok?"cloud-check":"cloud-off")+'"></i>'+msg;
 }
 
-function loadCSV(url){
-  return fetch(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); }).then(parseCSV);
+function loadCSV(url,timeoutMs){
+  timeoutMs=timeoutMs||10000;
+  var hasAC=typeof AbortController!=="undefined";
+  var controller=hasAC?new AbortController():null;
+  var timer=hasAC?setTimeout(function(){controller.abort();},timeoutMs):null;
+  return fetch(url,hasAC?{signal:controller.signal}:{})
+    .then(function(r){ if(timer)clearTimeout(timer); if(!r.ok) throw new Error("HTTP "+r.status); return r.text(); })
+    .then(parseCSV)
+    .catch(function(e){ if(timer)clearTimeout(timer); throw e; });
 }
 
 function init(){
