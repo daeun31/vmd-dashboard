@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VM 라운딩 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<script>
+/* ============================================================
+   ▼▼▼ 설정: 구글 스프레드시트 "웹에 게시" CSV 주소를 붙여넣으세요 ▼▼▼
+   비워두면(") 내장된 샘플 데이터(2026년 5~7월)로 표시됩니다.
+   ============================================================ */
+var SCHEDULE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBwhOpIFBkqqZ5MNfh9hHOCjRlb7E2L2wZ5Y5biQmAZolWIzKnArYbZk-jDP4d5Z1T53AJVs7g/pub?gid=2038188993&single=true&output=csv";   /* 일정 시트 CSV 주소 (필수) */
+var STORES_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBwhOpIFBkqqZ5MNfh9hHOCjRlb7E2L2wZ5Y5biQmAZolWIzKnArYbZk-jDP4d5Z1T53AJVs7g/pub?gid=743461190&single=true&output=csv";   /* 매장 목록 시트 CSV 주소 (선택, 비우면 내장 목록 사용) */
+</script>
+<style>
+:root{
+  --bg:#F5F4F0; --card:#FFFFFF; --ink:#1E1D2B; --ink-2:#5C5A6E; --ink-3:#96949F;
+  --line:#E4E2DC; --accent:#534AB7; --accent-soft:#EEEDFE; --accent-deep:#26215C;
+  --green:#1D9E75; --green-soft:#E1F5EE; --green-deep:#085041;
+  --amber:#BA7517; --amber-soft:#FAEEDA; --amber-deep:#633806;
+  --pink:#D4537E; --pink-soft:#FBEAF0; --pink-deep:#72243E;
+  --red:#C0392B; --red-soft:#FCEBEB; --red-deep:#791F1F;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6;}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px 48px;}
+.topnav{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10;}
+.topnav-in{max-width:1080px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:56px;}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;}
+.brand i{color:var(--accent);font-size:20px;}
+.sync{font-size:12px;color:var(--ink-3);display:flex;align-items:center;gap:5px;}
+.sync.on{color:var(--green);}
+.notice{background:var(--amber-soft);color:var(--amber-deep);font-size:13px;padding:10px 14px;border-radius:8px;margin:16px 0 0;}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:28px 0 20px;}
+.page-head h1{font-size:22px;font-weight:700;}
+.page-head p{font-size:13px;color:var(--ink-2);margin-top:2px;}
+.month-pick select{font-family:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer;}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px;}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;}
+.kpi .lbl{font-size:12px;color:var(--ink-2);}
+.kpi .val{font-size:26px;font-weight:700;margin-top:2px;}
+.kpi .sub{font-size:12px;margin-top:6px;color:var(--ink-3);}
+.kpi .sub.bad{color:var(--red);}
+.bar{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-top:10px;}
+.bar>span{display:block;height:100%;background:var(--accent);}
+.grid-2{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-bottom:14px;}
+@media (max-width:820px){.grid-2{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;}
+.card h2{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.card h2 i{font-size:18px;color:var(--accent);}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cal .dow{text-align:center;font-size:11px;color:var(--ink-3);padding:4px 0;}
+.cal .day{text-align:center;padding:8px 0 5px;border-radius:8px;cursor:pointer;font-size:13px;min-height:44px;}
+.cal .day:hover{background:var(--bg);}
+.cal .day.today{background:var(--accent-soft);color:var(--accent-deep);font-weight:700;}
+.cal .day.sel{outline:2px solid var(--accent);}
+.dotrow{display:flex;gap:3px;justify-content:center;margin-top:3px;height:5px;}
+.dotrow span{width:5px;height:5px;border-radius:50%;}
+.cal-detail{margin-top:12px;background:var(--bg);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--ink-2);}
+.cal-detail .row{margin:2px 0;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--ink-2);}
+.legend span{display:inline-flex;align-items:center;gap:5px;}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.chip{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;margin-right:8px;}
+.insight{border-radius:8px;padding:12px 14px;margin-bottom:8px;}
+.insight strong{display:block;font-size:13px;margin-bottom:2px;}
+.insight p{font-size:12.5px;line-height:1.55;}
+.insight.purple{background:var(--accent-soft);}.insight.purple strong{color:var(--accent-deep);}.insight.purple p{color:#3C3489;}
+.insight.amber{background:var(--amber-soft);}.insight.amber strong{color:#412402;}.insight.amber p{color:var(--amber-deep);}
+.insight.green{background:var(--green-soft);}.insight.green strong{color:#04342C;}.insight.green p{color:var(--green-deep);}
+.staff-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media (max-width:600px){.staff-grid{grid-template-columns:1fr;}}
+.staff{background:var(--bg);border-radius:8px;padding:14px;}
+.staff .top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.staff .face{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;}
+.staff .nm{font-size:14px;font-weight:600;}
+.staff .tm{font-size:11.5px;color:var(--ink-3);}
+.staff ul{list-style:none;font-size:12.5px;color:var(--ink-2);}
+.staff li{padding:3px 0;}
+.staff li b{color:var(--ink);font-weight:600;}
+.stores{display:grid;grid-template-columns:1fr 1fr;gap:2px 20px;}
+@media (max-width:700px){.stores{grid-template-columns:1fr;}}
+.store{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--line);font-size:13px;}
+.store .no{color:var(--ink-3);font-size:11.5px;min-width:20px;}
+.store .nm{flex:1;}
+.tag{font-size:11px;font-weight:600;padding:1px 8px;border-radius:20px;}
+.tag.done{background:var(--green-soft);color:var(--green-deep);}
+.tag.plan{background:var(--accent-soft);color:var(--accent-deep);}
+.tag.none{background:var(--red-soft);color:var(--red-deep);}
+footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-in">
+    <span class="brand"><i class="ti ti-layout-grid"></i>VM 라운딩</span>
+    <span class="sync" id="sync"><i class="ti ti-cloud"></i>데이터 불러오는 중…</span>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div id="notice"></div>
+
+  <div class="page-head">
+    <div>
+      <h1>VM 라운딩 대시보드</h1>
+      <p id="subtitle"></p>
+    </div>
+    <div class="month-pick"><select id="month-sel"></select></div>
+  </div>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="grid-2">
+    <div class="card">
+      <h2><i class="ti ti-calendar"></i><span id="cal-title"></span></h2>
+      <div class="cal" id="cal"></div>
+      <div class="cal-detail" id="cal-detail"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="card">
+      <h2><i class="ti ti-sparkles"></i>AI 인사이트</h2>
+      <div id="insights"></div>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <div class="card">
+      <h2><i class="ti ti-users"></i>담당자 현황</h2>
+      <div class="staff-grid" id="staff"></div>
+    </div>
+    <div class="card">
+      <h2><i class="ti ti-list-check"></i>이번 달 일정 요약</h2>
+      <ul style="list-style:none;font-size:13.5px;" id="month-list"></ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><i class="ti ti-building-store"></i>매장 커버리지</h2>
+    <div class="stores" id="stores"></div>
+    <p style="font-size:12px;color:var(--ink-3);margin-top:10px;">일정 시트에 등록된 전체 기간 기준 · 완료/예정은 오늘 날짜로 자동 계산</p>
+  </section>
+
+  <footer>VM 라운딩 대시보드 · 구글 스프레드시트 연동</footer>
+</div>
+
+<script>
+var SAMPLE_SCHEDULE = [
+["2026-05-15","민지","롯데 아울렛 서울역"],["2026-05-18","기타","다은 대휴"],["2026-05-19","민지","한남점"],
+["2026-05-21","기타","사무실 이사"],["2026-05-29","전체","성수 플래그쉽 스토어"],
+["2026-06-02","전체","현대프리미엄 SPACE1"],["2026-06-03","기타","지방선거"],["2026-06-09","전체","타임스퀘어 영등포점"],
+["2026-06-09","기타","AI 교육"],["2026-06-10","전체","롯데 아쿠아몰 광복점"],["2026-06-12","기타","패밀리데이 · 민지 경조"],
+["2026-06-15","기타","다은 연차 · 민지 경조"],["2026-06-16","기타","다은 연차 · 민지 경조"],["2026-06-17","전체","스타필드 고양점"],
+["2026-06-19","전체","서울숲점"],["2026-06-24","전체","LF스퀘어 광양점"],["2026-06-26","전체","스타필드빌리지 운정점"],
+["2026-07-01","전체","신사점"],["2026-07-08","다은","현대백화점 신촌점"],["2026-07-08","민지","신세계백화점 의정부점"],
+["2026-07-10","전체","아이파크몰 용산점"],["2026-07-10","기타","패밀리데이"],["2026-07-15","전체","커넥트현대 청주점"],
+["2026-07-17","기타","제헌절"],["2026-07-22","전체","롯데백화점 평촌점"],["2026-07-24","전체","신세계백화점 대전점"],
+["2026-07-29","기타","오픈 작업"],["2026-07-30","기타","오픈 작업"],["2026-07-31","기타","동부산 오픈"]
+];
+var SAMPLE_STORES = ["신사점","한남점","현대백화점 신촌점","현대프리미엄 송도점","신세계백화점 광주점","포시즌아울렛 신사점","아이파크몰 용산점","커넥트현대 청주점","롯데면세점 명동본점","현대프리미엄 SPACE1","신세계백화점 의정부점","신세계백화점 대전점","롯데프리미엄 김해점","성수 플래그쉽 스토어","스타필드 고양점","롯데백화점 평촌점","스타필드빌리지 운정점","서울숲점","신세계백화점 센텀시티점","LF스퀘어 광양점","타임스퀘어 영등포점","롯데 아울렛 서울역","롯데 아쿠아몰 광복점"];
+
+var dows=["일","월","화","수","목","금","토"];
+var palette=[["#534AB7","var(--accent-soft)","var(--accent-deep)"],["#D4537E","var(--pink-soft)","var(--pink-deep)"],["#BA7517","var(--amber-soft)","var(--amber-deep)"],["#0F6E56","var(--green-soft)","var(--green-deep)"]];
+var whoStyle={};
+
+function parseCSV(text){
+  var rows=[],row=[],cur="",q=false;
+  text=text.replace(/^\uFEFF/,"");
+  for(var i=0;i<text.length;i++){
+    var ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===','){ row.push(cur);cur=""; }
+    else if(ch==='\n'){ row.push(cur);cur="";rows.push(row);row=[]; }
+    else if(ch!=='\r') cur+=ch;
+  }
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(function(r){return r.some(function(c){return c.trim()!=="";});});
+}
+
+function parseDate(s){
+  s=(s||"").trim();
+  var m=s.match(/(\d{4})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})/);
+  if(!m) return null;
+  return {y:+m[1],m:+m[2],d:+m[3]};
+}
+
+var schedule=[], storeList=[], usingSample=false;
+
+function normalize(rows){
+  var out=[];
+  rows.forEach(function(r,i){
+    if(i===0 && /날짜|date/i.test(r[0])) return;
+    var dt=parseDate(r[0]); if(!dt) return;
+    out.push({y:dt.y,m:dt.m,d:dt.d,who:(r[1]||"기타").trim(),t:(r[2]||"").trim()});
+  });
+  return out;
+}
+
+function setupWho(){
+  whoStyle={"전체":{dot:"#1D9E75",bg:"var(--green-soft)",fg:"var(--green-deep)"},"기타":{dot:"#96949F",bg:"var(--bg)",fg:"var(--ink-2)"}};
+  var others=[]; schedule.forEach(function(e){ if(e.who!=="전체"&&e.who!=="기타"&&others.indexOf(e.who)<0) others.push(e.who); });
+  others.forEach(function(nm,i){ var p=palette[i%palette.length]; whoStyle[nm]={dot:p[0],bg:p[1],fg:p[2]}; });
+  document.getElementById("legend").innerHTML =
+    '<span><i style="background:#1D9E75;"></i>전체 라운딩</span>'
+    +others.map(function(nm){return '<span><i style="background:'+whoStyle[nm].dot+';"></i>'+nm+'</span>';}).join("")
+    +'<span><i style="background:#96949F;"></i>기타 일정</span>';
+  return others;
+}
+
+function chip(who){ var s=whoStyle[who]||whoStyle["기타"]; return '<span class="chip" style="background:'+s.bg+';color:'+s.fg+';">'+who+'</span>'; }
+
+var now=new Date(); var TY=now.getFullYear(), TM=now.getMonth()+1, TD=now.getDate();
+function isPastOrToday(e){ return e.y<TY||(e.y===TY&&(e.m<TM||(e.m===TM&&e.d<=TD))); }
+
+function render(){
+  var others=setupWho();
+  var monthKeys=[]; schedule.forEach(function(e){ var k=e.y+"-"+e.m; if(monthKeys.indexOf(k)<0) monthKeys.push(k); });
+  monthKeys.sort(function(a,b){var A=a.split("-"),B=b.split("-");return (+A[0]-(+B[0]))||(+A[1]-(+B[1]));});
+  var sel=document.getElementById("month-sel");
+  sel.innerHTML=monthKeys.map(function(k){var p=k.split("-");return '<option value="'+k+'">'+p[0]+'년 '+p[1]+'월</option>';}).join("");
+  var cur=TY+"-"+TM;
+  sel.value=(monthKeys.indexOf(cur)>=0)?cur:monthKeys[monthKeys.length-1];
+  sel.onchange=function(){renderMonth(sel.value);};
+
+  var staffNames=others.length?others:["담당자"];
+  document.getElementById("subtitle").textContent="VM팀 "+staffNames.join(" · ")+" · 담당 "+storeList.length+"개 매장";
+
+  renderInsights();
+  renderStores();
+  renderMonth(sel.value);
+}
+
+function renderMonth(key){
+  var p=key.split("-"),Y=+p[0],M=+p[1];
+  var evs=schedule.filter(function(e){return e.y===Y&&e.m===M;});
+  var visits=evs.filter(function(e){return storeList.indexOf(e.t)>=0;});
+  var done=visits.filter(isPastOrToday).length;
+  var pct=visits.length?Math.round(done/visits.length*100):0;
+  var etc=evs.filter(function(e){return e.who==="기타";}).length;
+  var neverVisited=storeList.filter(function(nm){return !schedule.some(function(e){return e.t===nm;});});
+
+  document.getElementById("cal-title").textContent="라운딩 캘린더 · "+Y+"년 "+M+"월";
+  document.getElementById("kpis").innerHTML=
+    '<div class="kpi"><div class="lbl">이달 라운딩</div><div class="val">'+done+' / '+visits.length+'개소</div><div class="bar"><span style="width:'+pct+'%;"></span></div><div class="sub">진행률 '+pct+'%</div></div>'
+    +'<div class="kpi"><div class="lbl">담당 매장</div><div class="val">'+storeList.length+'개</div><div class="sub">매장 목록 시트 기준</div></div>'
+    +'<div class="kpi"><div class="lbl">미방문 매장</div><div class="val">'+neverVisited.length+'개소</div><div class="sub'+(neverVisited.length?' bad':'')+'">'+(neverVisited.length?'등록 기간 내 일정 없음':'모든 매장 일정 있음')+'</div></div>'
+    +'<div class="kpi"><div class="lbl">이달 기타 일정</div><div class="val">'+etc+'건</div><div class="sub">휴무·행사·오픈 포함</div></div>';
+
+  var byDay={}; evs.forEach(function(e){(byDay[e.d]=byDay[e.d]||[]).push(e);});
+  var start=new Date(Y,M-1,1).getDay(), days=new Date(Y,M,0).getDate();
+  var html="";
+  for(var i=0;i<7;i++)html+='<div class="dow">'+dows[i]+'</div>';
+  for(var b=0;b<start;b++)html+='<div></div>';
+  for(var d=1;d<=days;d++){
+    var today=(Y===TY&&M===TM&&d===TD);
+    html+='<div class="day'+(today?' today':'')+'" data-day="'+d+'">'+d+'<div class="dotrow">'
+      +(byDay[d]||[]).map(function(e){return '<span style="background:'+(whoStyle[e.who]||whoStyle["기타"]).dot+';"></span>';}).join("")
+      +'</div></div>';
+  }
+  var cal=document.getElementById("cal"); cal.innerHTML=html;
+  var detail=document.getElementById("cal-detail");
+  function showDay(d){
+    document.querySelectorAll(".cal .day").forEach(function(el){el.classList.toggle("sel",el.getAttribute("data-day")==String(d));});
+    var list=byDay[d];
+    if(!list){detail.textContent=M+"월 "+d+"일 · 등록된 일정이 없습니다.";return;}
+    detail.innerHTML=list.map(function(e){return '<div class="row">'+chip(e.who)+'<span style="color:var(--ink);">'+M+'월 '+e.d+'일 · '+e.t+'</span></div>';}).join("");
+  }
+  cal.onclick=function(ev){var c=ev.target.closest("[data-day]");if(c)showDay(+c.getAttribute("data-day"));};
+  showDay((Y===TY&&M===TM)?TD:(evs[0]?evs[0].d:1));
+
+  var names=Object.keys(whoStyle).filter(function(k){return k!=="전체"&&k!=="기타";});
+  document.getElementById("staff").innerHTML=names.map(function(nm){
+    var own=evs.filter(function(e){return e.who===nm;});
+    var team=evs.filter(function(e){return e.who==="전체";}).length;
+    var s=whoStyle[nm];
+    return '<div class="staff"><div class="top"><span class="face" style="background:'+s.bg+';color:'+s.fg+';">'+nm.slice(0,2)+'</span>'
+      +'<div><div class="nm">'+nm+'</div><div class="tm">이달 방문 '+(own.length+team)+'회 (단독 '+own.length+' · 전체 '+team+')</div></div></div>'
+      +'<ul>'+(own.length?own.map(function(e){return '<li>'+M+'/'+e.d+' · <b>'+e.t+'</b> 단독</li>';}).join(""):'<li>단독 배정 없음 · 전체 라운딩 참여</li>')+'</ul></div>';
+  }).join("")||'<p style="font-size:13px;color:var(--ink-3);">구분 열에 담당자 이름을 입력하면 표시됩니다.</p>';
+
+  document.getElementById("month-list").innerHTML=evs.map(function(e){
+    var isStore=storeList.indexOf(e.t)>=0, past=isPastOrToday(e);
+    return '<li style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);'+(past?'opacity:.55;':'')+'">'
+      +'<span style="min-width:44px;font-size:12px;color:var(--ink-3);">'+M+'/'+e.d+'</span>'+chip(e.who)
+      +'<span style="flex:1;">'+e.t+'</span>'
+      +(isStore?('<span class="tag '+(past?'done">완료':'plan">예정')+'</span>'):'')
+      +'</li>';
+  }).join("")||'<li style="font-size:13px;color:var(--ink-3);">이달 일정이 없습니다.</li>';
+}
+
+function renderInsights(){
+  var neverVisited=storeList.filter(function(nm){return !schedule.some(function(e){return e.t===nm;});});
+  var upcoming=schedule.filter(function(e){return !isPastOrToday(e)&&storeList.indexOf(e.t)>=0;});
+  var next=upcoming[0];
+  var html="";
+  if(neverVisited.length){
+    html+='<div class="insight amber"><strong>미방문 매장 '+neverVisited.length+'곳</strong><p>'+neverVisited.join(", ")+' 매장이 등록된 일정에 없어요. 다음 스케줄에 반영을 검토하세요.</p></div>';
+  }else{
+    html+='<div class="insight green"><strong>커버리지 달성</strong><p>모든 담당 매장에 방문 일정이 등록되어 있어요.</p></div>';
+  }
+  if(next){
+    html+='<div class="insight purple"><strong>다음 라운딩</strong><p>'+next.m+'월 '+next.d+'일 '+next.t+' ('+next.who+') 방문이 예정되어 있어요.</p></div>';
+  }
+  var total=schedule.filter(function(e){return storeList.indexOf(e.t)>=0;}).length;
+  var doneAll=schedule.filter(function(e){return storeList.indexOf(e.t)>=0&&isPastOrToday(e);}).length;
+  html+='<div class="insight green"><strong>누적 진행 현황</strong><p>등록 기간 전체 기준 '+doneAll+' / '+total+'개소 라운딩을 완료했어요.</p></div>';
+  document.getElementById("insights").innerHTML=html;
+}
+
+function renderStores(){
+  var visitMap={};
+  schedule.forEach(function(e){ if(storeList.indexOf(e.t)>=0){ if(!visitMap[e.t]||!isPastOrToday(e)) visitMap[e.t]=e; } });
+  document.getElementById("stores").innerHTML=storeList.map(function(nm,i){
+    var v=visitMap[nm],tag;
+    if(!v)tag='<span class="tag none">미방문</span>';
+    else if(isPastOrToday(v))tag='<span class="tag done">'+v.m+'/'+v.d+' 완료</span>';
+    else tag='<span class="tag plan">'+v.m+'/'+v.d+' 예정</span>';
+    return '<div class="store"><span class="no">'+(i+1)+'</span><span class="nm">'+nm+'</span>'+tag+'</div>';
+  }).join("");
+}
+
+function setSync(ok,msg){
+  var el=document.getElementById("sync");
+  el.className="sync"+(ok?" on":"");
+  el.innerHTML='<i class="ti ti-'+(ok?"cloud-check":"cloud-off")+'"></i>'+msg;
+}
+
+function loadCSV(url){
+  return fetch(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); }).then(parseCSV);
+}
+
+function init(){
+  var jobs=[];
+  if(SCHEDULE_CSV_URL){ jobs.push(loadCSV(SCHEDULE_CSV_URL).then(function(rows){schedule=normalize(rows);})); }
+  if(STORES_CSV_URL){ jobs.push(loadCSV(STORES_CSV_URL).then(function(rows){
+    storeList=rows.filter(function(r,i){return !(i===0&&/번호|매장/.test(r.join()));}).map(function(r){return (r[1]||r[0]||"").trim();}).filter(Boolean);
+  })); }
+  Promise.all(jobs).then(function(){
+    if(!schedule.length){ usingSample=true; schedule=normalize(SAMPLE_SCHEDULE.map(function(r){return r;})); }
+    if(!storeList.length){ storeList=SAMPLE_STORES.slice(); }
+    schedule.sort(function(a,b){return (a.y-b.y)||(a.m-b.m)||(a.d-b.d);});
+    if(usingSample&&!SCHEDULE_CSV_URL){
+      document.getElementById("notice").innerHTML='<div class="notice"><i class="ti ti-info-circle" style="vertical-align:-2px;"></i> 아직 스프레드시트가 연결되지 않아 내장 샘플 데이터를 표시하고 있어요. 파일 상단의 SCHEDULE_CSV_URL에 게시 주소를 입력하세요.</div>';
+      setSync(false,"샘플 데이터");
+    }else{
+      setSync(true,"스프레드시트 연동됨");
+    }
+    render();
+  }).catch(function(err){
+    usingSample=true; schedule=normalize(SAMPLE_SCHEDULE); storeList=SAMPLE_STORES.slice();
+    schedule.sort(function(a,b){return (a.y-b.y)||(a.m-b.m)||(a.d-b.d);});
+    document.getElementById("notice").innerHTML='<div class="notice"><i class="ti ti-alert-circle" style="vertical-align:-2px;"></i> 스프레드시트를 불러오지 못해 샘플 데이터를 표시합니다. 게시 주소와 "웹에 게시" 설정을 확인하세요.</div>';
+    setSync(false,"연동 실패 · 샘플 표시");
+    render();
+  });
+}
+init();
+</script>
+</body>
+</html>
