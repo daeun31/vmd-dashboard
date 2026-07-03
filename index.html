@@ -156,13 +156,12 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .ss-report-btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;padding:13px 22px;border-radius:10px;text-decoration:none;margin:14px 0 18px;}
 .ss-report-btn i{font-size:18px;}
 .ss-report-btn.disabled{background:var(--bg);color:var(--ink-3);pointer-events:none;}
-.ss-scores{display:flex;flex-direction:column;gap:10px;margin:14px 0 4px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;}
-.ss-score-row{display:flex;align-items:center;gap:10px;}
-.ss-score-row i{font-size:17px;color:var(--accent);min-width:18px;}
-.ss-score-row .lbl{font-size:12.5px;font-weight:600;color:var(--ink);min-width:76px;}
-.ss-score-row .track{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden;}
-.ss-score-row .track>span{display:block;height:100%;border-radius:4px;}
-.ss-score-row .val{font-size:12.5px;font-weight:700;color:var(--ink);min-width:36px;text-align:right;}
+.ss-score-panel{display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 16px 18px;border:1px solid var(--line);border-radius:14px;margin:14px 0 16px;}
+.ss-score-chips{display:flex;gap:10px;margin-top:16px;justify-content:center;flex-wrap:wrap;width:100%;}
+.ss-score-chip{background:var(--bg);border-radius:10px;padding:9px 16px;min-width:88px;}
+.ss-score-chip i{font-size:15px;color:var(--accent);}
+.ss-score-chip .lbl{font-size:11px;color:var(--ink-3);margin-top:3px;}
+.ss-score-chip .val{font-size:16px;font-weight:800;color:var(--ink);}
 .fb-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 @media (max-width:600px){.fb-card-grid{grid-template-columns:1fr;}}
 .fb-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
@@ -348,9 +347,11 @@ function normalize(rows){
 function normalizeReports(rows){
   if(!rows.length) return [];
   var header=rows[0].map(function(c){return (c||"").toLowerCase();});
+  var headerLoose=header.map(function(h){return h.replace(/\s+/g,"");});
   function findCol(keys){
+    var keysLoose=keys.map(function(k){return k.replace(/\s+/g,"");});
     for(var i=0;i<header.length;i++){ if(keys.indexOf(header[i])>=0) return i; }
-    for(var i=0;i<header.length;i++){ for(var k=0;k<keys.length;k++){ if(header[i].indexOf(keys[k])>=0) return i; } }
+    for(var i=0;i<headerLoose.length;i++){ for(var k=0;k<keysLoose.length;k++){ if(headerLoose[i].indexOf(keysLoose[k])>=0) return i; } }
     return -1;
   }
   function findNum(row,col){ if(col<0) return null; var v=parseFloat((row[col]||"").toString().replace(/[^\d.]/g,"")); return isNaN(v)?null:v; }
@@ -359,7 +360,7 @@ function normalizeReports(rows){
   var linkCol=findCol(["파일","링크","보고서","file","link"]);
   var sumCol=findCol(["피드백","요약","의견","코멘트","summary","feedback"]);
   var mgmtCol=findCol(["매장관리"]);
-  var workCol=findCol(["근무상태","근무 상태"]);
+  var workCol=findCol(["근무상태"]);
   var dispCol=findCol(["디스플레이"]);
   var out=[];
   for(var r=1;r<rows.length;r++){
@@ -380,6 +381,7 @@ function matchReports(){
   schedule.forEach(function(e){ e._matched=false; e._report=null; if(storeList.indexOf(e.t)>=0){ (byStore[e.t]=byStore[e.t]||[]).push(e); } });
   var reportsByStore={};
   reports.forEach(function(r){ (reportsByStore[r.store]=reportsByStore[r.store]||[]).push(r); });
+  var unmatchedReports=[];
   Object.keys(reportsByStore).forEach(function(nm){
     var visits=(byStore[nm]||[]).slice().sort(function(a,b){return toDate(a)-toDate(b);});
     var reps=reportsByStore[nm].slice().sort(function(a,b){return toDate(a)-toDate(b);});
@@ -391,8 +393,16 @@ function matchReports(){
         if(diff<=REPORT_MATCH_WINDOW && diff<bestDiff){ bestDiff=diff; bestIdx=idx; }
       });
       if(bestIdx>=0){ visits[bestIdx]._matched=true; visits[bestIdx]._report=rep; }
+      else if(storeList.indexOf(nm)>=0){ unmatchedReports.push(rep); }
     });
   });
+  /* 일정에 없는 날짜로 보고서가 제출되면, 그 날짜로 새 라운딩 일정을 자동 생성합니다 */
+  if(unmatchedReports.length){
+    unmatchedReports.forEach(function(rep){
+      schedule.push({y:rep.y,m:rep.m,d:rep.d,who:"전체",t:rep.store,_matched:true,_report:rep,_adhoc:true});
+    });
+    schedule.sort(function(a,b){return (a.y-b.y)||(a.m-b.m)||(a.d-b.d);});
+  }
 }
 /* 2026-07-01부터 "보고서 제출 기준 완료"를 적용합니다.
    그 이전(5~6월) 일정은 보고서 제도가 없었으므로 날짜 경과 기준으로 자동 완료 처리합니다. */
@@ -704,7 +714,7 @@ function renderStoreStatusPage(){
           +g.items.map(function(e){
             var key=visitKey(e);
             return '<div class="ss-item'+(selectedVisit===key?' active':'')+'" data-visit="'+key.replace(/"/g,"&quot;")+'">'
-              +'<span class="ss-nm">'+e.t+'</span>'
+              +'<span class="ss-nm">'+e.t+(e._adhoc?' <i class="ti ti-plus" style="font-size:11px;color:var(--amber-deep);" title="일정 외 등록"></i>':'')+'</span>'
               +(e._report?'<span class="ss-type"><i class="ti ti-file-text" style="font-size:13px;vertical-align:-2px;"></i></span>':'')
               +statusTagHTML(e,false)
               +'</div>';
@@ -801,27 +811,35 @@ function showVisitDetail(key){
   var e=schedule.find(function(ev){ return storeList.indexOf(ev.t)>=0 && visitKey(ev)===key; });
   if(!e){ document.getElementById("ss-detail-wrap").innerHTML='<div class="ss-detail-empty"><i class="ti ti-file-search"></i><p>왼쪽에서 라운딩 일자를 선택해 주세요.</p></div>'; return; }
   var t=storeType(e.t);
-  var html='<div class="ss-big-date">'+e.m+'/'+e.d+'<span class="wd">('+weekdayKR(e.y,e.m,e.d)+')</span></div>'
+  var html='<div class="ss-big-date">'+e.m+'/'+e.d+'<span class="wd">('+weekdayKR(e.y,e.m,e.d)+')</span>'
+    +(e._adhoc?'<span class="wd" style="color:var(--amber-deep);background:var(--amber-soft);padding:2px 9px;border-radius:20px;font-weight:700;">일정 외 등록</span>':'')
+    +'</div>'
     +'<div class="ss-detail-hd" style="margin-top:6px;"><div><h3 style="font-size:15px;">'+e.t+'</h3><div class="sub">'+t+' · '+e.who+'</div></div>'+statusTagHTML(e,false)+'</div>';
 
   var rep=e._report;
-  if(rep&&rep.link){ html+='<a class="ss-report-btn" href="'+rep.link+'" target="_blank" rel="noopener"><i class="ti ti-file-text"></i>보고서</a>'; }
-  else{ html+='<span class="ss-report-btn disabled"><i class="ti ti-file-off"></i>보고서 없음</span>'; }
 
   if(rep&&rep.scores&&(rep.scores.매장관리!==null||rep.scores.근무상태!==null||rep.scores.디스플레이!==null)){
     var SCORE_MAX=5;
     var SCORE_ICON={"매장관리":"ti-building-store","근무상태":"ti-user-check","디스플레이":"ti-layout-grid"};
-    var scoreRows=["매장관리","근무상태","디스플레이"].map(function(k){
-      var v=rep.scores[k];
-      if(v===null) return '';
-      var pct=Math.max(0,Math.min(100,v/SCORE_MAX*100));
-      var color=pct>=80?"#1D9E75":(pct>=50?"#534AB7":"#BA7517");
-      return '<div class="ss-score-row"><i class="ti '+SCORE_ICON[k]+'"></i><span class="lbl">'+k+'</span>'
-        +'<div class="track"><span style="width:'+pct+'%;background:'+color+';"></span></div>'
-        +'<span class="val">'+v+'/'+SCORE_MAX+'</span></div>';
+    var vals=["매장관리","근무상태","디스플레이"].map(function(k){return rep.scores[k];}).filter(function(v){return v!==null&&v!==undefined;});
+    var avg=vals.reduce(function(a,b){return a+b;},0)/vals.length;
+    var pct=Math.max(0,Math.min(100,avg/SCORE_MAX*100));
+    var ringColor=pct>=80?"#1D9E75":(pct>=50?"#534AB7":"#BA7517");
+    var r=54,cc=2*Math.PI*r,off=cc*(1-pct/100);
+    var ring='<svg viewBox="0 0 140 140" width="130" height="130">'
+      +'<circle cx="70" cy="70" r="'+r+'" fill="none" stroke="var(--bg)" stroke-width="14"></circle>'
+      +'<circle cx="70" cy="70" r="'+r+'" fill="none" stroke="'+ringColor+'" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+cc.toFixed(2)+'" stroke-dashoffset="'+off.toFixed(2)+'" transform="rotate(-90 70 70)"></circle>'
+      +'<text x="70" y="65" text-anchor="middle" font-size="30" font-weight="800" fill="var(--ink)">'+avg.toFixed(1)+'</text>'
+      +'<text x="70" y="86" text-anchor="middle" font-size="11.5" fill="var(--ink-3)">평균 · '+SCORE_MAX+'점 만점</text>'
+      +'</svg>';
+    var chips=["매장관리","근무상태","디스플레이"].filter(function(k){return rep.scores[k]!==null;}).map(function(k){
+      return '<div class="ss-score-chip"><i class="ti '+SCORE_ICON[k]+'"></i><div class="lbl">'+k+'</div><div class="val">'+rep.scores[k]+'/'+SCORE_MAX+'</div></div>';
     }).join("");
-    html+='<div class="ss-scores">'+scoreRows+'</div>';
+    html+='<div class="ss-score-panel">'+ring+'<div class="ss-score-chips">'+chips+'</div></div>';
   }
+
+  if(rep&&rep.link){ html+='<a class="ss-report-btn" href="'+rep.link+'" target="_blank" rel="noopener"><i class="ti ti-file-text"></i>보고서</a>'; }
+  else{ html+='<span class="ss-report-btn disabled"><i class="ti ti-file-off"></i>보고서 없음</span>'; }
 
   if(!rep){
     html+='<div class="ss-summary empty"><div class="lbl"><i class="ti ti-sparkles"></i>AI 매장 피드백 요약</div><p>이 라운딩은 아직 보고서가 제출되지 않았어요.</p></div>';
