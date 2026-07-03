@@ -692,7 +692,15 @@ function loadWeatherForCities(cities,Y,M){
   var mk=Y+"-"+M;
   var days=new Date(Y,M,0).getDate();
   var pad=function(n){return String(n).padStart(2,"0");};
-  var start=Y+"-"+pad(M)+"-01", end=Y+"-"+pad(M)+"-"+pad(days);
+  var monthStart=new Date(Y,M-1,1), monthEnd=new Date(Y,M-1,days);
+  var today0=new Date(TY,TM-1,TD);
+  var maxForecast=new Date(today0); maxForecast.setDate(maxForecast.getDate()+15);
+  var minPast=new Date(today0); minPast.setDate(minPast.getDate()-90);
+  var rangeStart=monthStart<minPast?minPast:monthStart;
+  var rangeEnd=monthEnd>maxForecast?maxForecast:monthEnd;
+  if(rangeStart>rangeEnd) return; // 이 달은 예보/과거 조회 가능 범위를 완전히 벗어남
+  var fmt=function(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());};
+  var start=fmt(rangeStart), end=fmt(rangeEnd);
   var jobs=cities.filter(function(c){return !weatherCache[c+"|"+mk];}).map(function(c){return fetchCityWeather(c,mk,start,end);});
   Promise.all(jobs).then(applyWeatherToDOM);
 }
