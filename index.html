@@ -166,6 +166,8 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .ss-month-grp{margin-bottom:6px;}
 .ss-month-hd{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:800;color:var(--ink);padding:12px 8px 4px;border-top:1px solid var(--line);}
 .ss-month-grp:first-child .ss-month-hd{border-top:none;padding-top:0;}
+.ss-month-hd.collapsible{cursor:pointer;}
+.ss-month-hd .ss-chev{font-size:15px;color:var(--ink-3);transition:transform .2s;}
 .ss-month-hd .cur{font-size:11px;font-weight:700;color:var(--accent-deep);background:var(--accent-soft);padding:1px 8px;border-radius:20px;}
 .ss-month-hd .cnt{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--ink-3);}
 .ss-date-hd{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:var(--ink-3);padding:10px 8px 4px;}
@@ -438,27 +440,59 @@ function normalizeReports(rows){
   var header=rows[0].map(function(c){return (c||"").toLowerCase();});
   var headerLoose=header.map(function(h){return h.replace(/\s+/g,"");});
   function findCol(keys){
-    var keysLoose=keys.map(function(k){return k.replace(/\s+/g,"");});
+    var keysLoose=keys.map(function(k){return k.toLowerCase().replace(/\s+/g,"");});
     for(var i=0;i<header.length;i++){ if(keys.indexOf(header[i])>=0) return i; }
     for(var i=0;i<headerLoose.length;i++){ for(var k=0;k<keysLoose.length;k++){ if(headerLoose[i].indexOf(keysLoose[k])>=0) return i; } }
     return -1;
   }
   function findNum(row,col){ if(col<0) return null; var v=parseFloat((row[col]||"").toString().replace(/[^\d.]/g,"")); return isNaN(v)?null:v; }
+  function gradeToPoints(v){
+    v=(v||"").toString().trim().toUpperCase();
+    if(v==="A") return 5; if(v==="B") return 3; if(v==="C") return 1;
+    return null;
+  }
   var dateCol=findCol(["방문일자","방문일","일자","date"]);
   var storeCol=findCol(["매장명","매장","store"]);
   var linkCol=findCol(["파일","링크","보고서","file","link"]);
   var sumCol=findCol(["피드백","요약","의견","코멘트","summary","feedback"]);
+
+  /* 상세 점수표(그리드 문항, 행별 A/B/C) 항목별 열 인식 */
+  var GRID_ITEMS={
+    "매장관리":["매장내외정리","청결상태","창고정리","인테리어유지보수","피팅룸관리","피팅룸"],
+    "근무상태":["고객응대","용모단정","자사상품정보숙지","상품정보숙지"],
+    "디스플레이":["mnq디스플레이","acc디스플레이","pop디스플레이","hanger디스플레이"]
+  };
+  var gridCols={};
+  Object.keys(GRID_ITEMS).forEach(function(cat){
+    gridCols[cat]=[];
+    GRID_ITEMS[cat].forEach(function(kw){
+      for(var i=0;i<headerLoose.length;i++){
+        if(headerLoose[i].indexOf(kw)>=0 && gridCols[cat].indexOf(i)<0){ gridCols[cat].push(i); break; }
+      }
+    });
+  });
+  var hasGrid=Object.keys(gridCols).some(function(cat){return gridCols[cat].length;});
+  /* 그리드가 없을 때를 대비한 예전 방식(단순 1~5점 질문) 폴백 */
   var mgmtCol=findCol(["매장관리"]);
   var workCol=findCol(["근무상태"]);
   var dispCol=findCol(["디스플레이"]);
+
   var out=[];
   for(var r=1;r<rows.length;r++){
     var row=rows[r];
     var dt=dateCol>=0?parseDate(row[dateCol]):null;
     var store=storeCol>=0?(row[storeCol]||"").trim():"";
     if(!dt||!store) continue;
-    out.push({y:dt.y,m:dt.m,d:dt.d,store:store,link:linkCol>=0?(row[linkCol]||"").trim():"",summary:sumCol>=0?(row[sumCol]||"").trim():"",
-      scores:{매장관리:findNum(row,mgmtCol),근무상태:findNum(row,workCol),디스플레이:findNum(row,dispCol)}});
+    var scores={};
+    if(hasGrid){
+      Object.keys(GRID_ITEMS).forEach(function(cat){
+        var pts=gridCols[cat].map(function(c){return gradeToPoints(row[c]);}).filter(function(v){return v!==null;});
+        scores[cat]=pts.length?Math.round((pts.reduce(function(a,b){return a+b;},0)/pts.length)*10)/10:null;
+      });
+    }else{
+      scores={매장관리:findNum(row,mgmtCol),근무상태:findNum(row,workCol),디스플레이:findNum(row,dispCol)};
+    }
+    out.push({y:dt.y,m:dt.m,d:dt.d,store:store,link:linkCol>=0?(row[linkCol]||"").trim():"",summary:sumCol>=0?(row[sumCol]||"").trim():"",scores:scores});
   }
   return out;
 }
@@ -929,14 +963,14 @@ function renderStoreStatusPage(){
 
   document.getElementById("ss-list").innerHTML=monthOrder.map(function(mk){
     var grp=monthMap[mk];
+    var isCur=(mk===curKey);
     var dateGroups=[]; var lastKey=null;
     grp.items.forEach(function(e){
       var k=e.y+"-"+e.m+"-"+e.d;
       if(k!==lastKey){ dateGroups.push({y:e.y,m:e.m,d:e.d,items:[]}); lastKey=k; }
       dateGroups[dateGroups.length-1].items.push(e);
     });
-    return '<div class="ss-month-grp"><div class="ss-month-hd">'+grp.m+'월'+(mk===curKey?' <span class="cur">이번 달</span>':'')+'<span class="cnt">'+grp.items.length+'건</span></div>'
-      +dateGroups.map(function(g){
+    var bodyHtml=dateGroups.map(function(g){
         return '<div class="ss-date-grp"><div class="ss-date-hd">'+g.m+'/'+g.d+'<span class="wd">('+weekdayKR(g.y,g.m,g.d)+')</span></div>'
           +g.items.map(function(e){
             var key=visitKey(e);
@@ -947,7 +981,10 @@ function renderStoreStatusPage(){
               +'</div>';
           }).join("")
           +'</div>';
-      }).join("")
+      }).join("");
+    return '<div class="ss-month-grp">'
+      +'<div class="ss-month-hd'+(isCur?'':' collapsible')+'"'+(isCur?'':' data-month-toggle="'+mk+'"')+'>'+grp.m+'월'+(isCur?' <span class="cur">이번 달</span>':'')+'<span class="cnt">'+grp.items.length+'건</span>'+(isCur?'':'<i class="ti ti-chevron-down ss-chev"></i>')+'</div>'
+      +'<div class="ss-month-body" id="ss-month-body-'+mk+'" style="'+(isCur?'':'display:none;')+'">'+bodyHtml+'</div>'
       +'</div>';
   }).join("")||'<p style="font-size:13px;color:var(--ink-3);padding:8px;">등록된 라운딩 일정이 없습니다.</p>';
   if(selectedVisit) showVisitDetail(selectedVisit);
@@ -1307,6 +1344,17 @@ document.addEventListener("click",function(e){
         setTimeout(function(){ row.classList.remove("flash"); },1600);
       }
     },50);
+  }
+  var monthHd=e.target.closest(".ss-month-hd.collapsible");
+  if(monthHd){
+    var mk=monthHd.getAttribute("data-month-toggle");
+    var body=document.getElementById("ss-month-body-"+mk);
+    var chev=monthHd.querySelector(".ss-chev");
+    if(body){
+      var willShow=(body.style.display==="none");
+      body.style.display=willShow?"":"none";
+      if(chev) chev.style.transform=willShow?"rotate(180deg)":"";
+    }
   }
   var kpiLink=e.target.closest("#kpi-unvisited");
   if(kpiLink){
