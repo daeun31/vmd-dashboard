@@ -143,12 +143,41 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .ss-months{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .ss-months .mchip{background:var(--bg);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--ink-2);}
 .ss-months .mchip b{color:var(--ink);font-weight:700;}
-.ss-report-btn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;padding:9px 16px;border-radius:8px;text-decoration:none;margin-bottom:16px;}
-.ss-report-btn i{font-size:15px;}
-.fb-sec{border-left:3px solid var(--accent-soft);padding:8px 0 8px 12px;margin-bottom:10px;}
-.fb-sec .fb-label{font-size:11.5px;font-weight:700;color:var(--accent-deep);margin-bottom:3px;}
-.fb-sec .fb-title{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:2px;}
-.fb-sec .fb-body{font-size:13px;line-height:1.65;color:var(--ink-2);}
+.ss-date-grp{margin-bottom:4px;}
+.ss-month-grp{margin-bottom:6px;}
+.ss-month-hd{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:800;color:var(--ink);padding:12px 8px 4px;border-top:1px solid var(--line);}
+.ss-month-grp:first-child .ss-month-hd{border-top:none;padding-top:0;}
+.ss-month-hd .cur{font-size:11px;font-weight:700;color:var(--accent-deep);background:var(--accent-soft);padding:1px 8px;border-radius:20px;}
+.ss-month-hd .cnt{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--ink-3);}
+.ss-date-hd{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:var(--ink-3);padding:10px 8px 4px;}
+.ss-date-hd .wd{color:var(--ink-2);}
+.ss-big-date{font-size:26px;font-weight:800;color:var(--ink);line-height:1.2;}
+.ss-big-date .wd{font-size:15px;font-weight:600;color:var(--ink-3);margin-left:6px;}
+.ss-report-btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;padding:13px 22px;border-radius:10px;text-decoration:none;margin:14px 0 18px;}
+.ss-report-btn i{font-size:18px;}
+.ss-report-btn.disabled{background:var(--bg);color:var(--ink-3);pointer-events:none;}
+.ss-scores{display:flex;flex-direction:column;gap:10px;margin:14px 0 4px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;}
+.ss-score-row{display:flex;align-items:center;gap:10px;}
+.ss-score-row i{font-size:17px;color:var(--accent);min-width:18px;}
+.ss-score-row .lbl{font-size:12.5px;font-weight:600;color:var(--ink);min-width:76px;}
+.ss-score-row .track{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden;}
+.ss-score-row .track>span{display:block;height:100%;border-radius:4px;}
+.ss-score-row .val{font-size:12.5px;font-weight:700;color:var(--ink);min-width:36px;text-align:right;}
+.fb-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media (max-width:600px){.fb-card-grid{grid-template-columns:1fr;}}
+.fb-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+.fb-card.fb-full{grid-column:1/-1;background:var(--accent-soft);border-color:transparent;}
+.fb-card-hd{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:7px;}
+.fb-card-hd i{font-size:17px;color:var(--accent);}
+.fb-full .fb-card-hd i{color:var(--accent-deep);}
+.fb-full .fb-card-hd{color:var(--accent-deep);}
+.fb-card-title{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:3px;}
+.fb-card-body{font-size:12.5px;line-height:1.65;color:var(--ink-2);}
+.fb-full .fb-card-body{color:#3C3489;}
+.fb-pct{display:flex;align-items:center;gap:8px;margin-top:9px;}
+.fb-pct .track{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;}
+.fb-pct .track>span{display:block;height:100%;background:var(--accent);border-radius:3px;}
+.fb-pct .val{font-size:11.5px;font-weight:700;color:var(--ink);min-width:34px;text-align:right;}
 .fb-toggle{background:transparent;border:1px solid var(--line);border-radius:8px;font-size:12px;font-weight:600;color:var(--ink-2);padding:6px 12px;cursor:pointer;margin-top:4px;}
 footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
 </style>
@@ -320,20 +349,26 @@ function normalizeReports(rows){
   if(!rows.length) return [];
   var header=rows[0].map(function(c){return (c||"").toLowerCase();});
   function findCol(keys){
+    for(var i=0;i<header.length;i++){ if(keys.indexOf(header[i])>=0) return i; }
     for(var i=0;i<header.length;i++){ for(var k=0;k<keys.length;k++){ if(header[i].indexOf(keys[k])>=0) return i; } }
     return -1;
   }
+  function findNum(row,col){ if(col<0) return null; var v=parseFloat((row[col]||"").toString().replace(/[^\d.]/g,"")); return isNaN(v)?null:v; }
   var dateCol=findCol(["방문일자","방문일","일자","date"]);
   var storeCol=findCol(["매장명","매장","store"]);
   var linkCol=findCol(["파일","링크","보고서","file","link"]);
   var sumCol=findCol(["피드백","요약","의견","코멘트","summary","feedback"]);
+  var mgmtCol=findCol(["매장관리"]);
+  var workCol=findCol(["근무상태","근무 상태"]);
+  var dispCol=findCol(["디스플레이"]);
   var out=[];
   for(var r=1;r<rows.length;r++){
     var row=rows[r];
     var dt=dateCol>=0?parseDate(row[dateCol]):null;
     var store=storeCol>=0?(row[storeCol]||"").trim():"";
     if(!dt||!store) continue;
-    out.push({y:dt.y,m:dt.m,d:dt.d,store:store,link:linkCol>=0?(row[linkCol]||"").trim():"",summary:sumCol>=0?(row[sumCol]||"").trim():""});
+    out.push({y:dt.y,m:dt.m,d:dt.d,store:store,link:linkCol>=0?(row[linkCol]||"").trim():"",summary:sumCol>=0?(row[sumCol]||"").trim():"",
+      scores:{매장관리:findNum(row,mgmtCol),근무상태:findNum(row,workCol),디스플레이:findNum(row,dispCol)}});
   }
   return out;
 }
@@ -427,7 +462,6 @@ function render(){
   document.getElementById("subtitle").textContent="VM팀 "+staffNames.join(" · ")+" · 담당 "+storeList.length+"개 매장";
 
   renderStores();
-  if(selectedStore===null && storeList.indexOf("신사점")>=0){ selectedStore="신사점"; }
   renderStoreStatusPage();
   renderMonth(sel.value);
 }
@@ -636,23 +670,51 @@ function renderStores(){
   }).join("");
 }
 
-var selectedStore=null;
+var WD_KR=["일","월","화","수","목","금","토"];
+function weekdayKR(y,m,d){ return WD_KR[new Date(y,m-1,d).getDay()]; }
+function visitKey(e){ return e.y+"-"+e.m+"-"+e.d+"-"+e.t; }
+
+var selectedVisit=null;
 function renderStoreStatusPage(){
-  var grp={}; storeList.forEach(function(nm){ var t=storeType(nm); (grp[t]=grp[t]||[]).push(nm); });
-  var html=TYPE_ORDER.filter(function(t){return grp[t]&&grp[t].length;}).map(function(t){
-    return '<div class="sl-sub"><div class="sl-sub-hd">'+t+'<span class="cnt">'+grp[t].length+'</span></div>'
-      +grp[t].map(function(nm){
-        var repCount=reports.filter(function(r){return r.store===nm;}).length;
-        return '<div class="ss-item'+(selectedStore===nm?' active':'')+'" data-store="'+nm.replace(/"/g,"&quot;")+'">'
-          +'<span class="ss-nm">'+nm+'</span>'
-          +(repCount?'<span class="ss-type"><i class="ti ti-file-text" style="font-size:13px;vertical-align:-2px;"></i> '+repCount+'</span>':'')
-          +statusTagHTML(latestVisit(nm),false)
+  var visits=schedule.filter(function(e){return storeList.indexOf(e.t)>=0;}).slice().sort(function(a,b){return toDate(b)-toDate(a);});
+  if(selectedVisit===null){
+    var withReport=visits.find(function(e){return !!e._report;});
+    selectedVisit=withReport?visitKey(withReport):(visits.length?visitKey(visits[0]):null);
+  }
+  var monthOrder=[]; var monthMap={};
+  visits.forEach(function(e){
+    var mk=e.y+"-"+e.m;
+    if(!monthMap[mk]){ monthMap[mk]={y:e.y,m:e.m,items:[]}; monthOrder.push(mk); }
+    monthMap[mk].items.push(e);
+  });
+  var curKey=TY+"-"+TM;
+  if(monthMap[curKey]){ monthOrder=[curKey].concat(monthOrder.filter(function(k){return k!==curKey;})); }
+
+  document.getElementById("ss-list").innerHTML=monthOrder.map(function(mk){
+    var grp=monthMap[mk];
+    var dateGroups=[]; var lastKey=null;
+    grp.items.forEach(function(e){
+      var k=e.y+"-"+e.m+"-"+e.d;
+      if(k!==lastKey){ dateGroups.push({y:e.y,m:e.m,d:e.d,items:[]}); lastKey=k; }
+      dateGroups[dateGroups.length-1].items.push(e);
+    });
+    return '<div class="ss-month-grp"><div class="ss-month-hd">'+grp.m+'월'+(mk===curKey?' <span class="cur">이번 달</span>':'')+'<span class="cnt">'+grp.items.length+'건</span></div>'
+      +dateGroups.map(function(g){
+        return '<div class="ss-date-grp"><div class="ss-date-hd">'+g.m+'/'+g.d+'<span class="wd">('+weekdayKR(g.y,g.m,g.d)+')</span></div>'
+          +g.items.map(function(e){
+            var key=visitKey(e);
+            return '<div class="ss-item'+(selectedVisit===key?' active':'')+'" data-visit="'+key.replace(/"/g,"&quot;")+'">'
+              +'<span class="ss-nm">'+e.t+'</span>'
+              +(e._report?'<span class="ss-type"><i class="ti ti-file-text" style="font-size:13px;vertical-align:-2px;"></i></span>':'')
+              +statusTagHTML(e,false)
+              +'</div>';
+          }).join("")
           +'</div>';
       }).join("")
       +'</div>';
-  }).join("");
-  document.getElementById("ss-list").innerHTML=html;
-  if(selectedStore) showStoreDetail(selectedStore);
+  }).join("")||'<p style="font-size:13px;color:var(--ink-3);padding:8px;">등록된 라운딩 일정이 없습니다.</p>';
+  if(selectedVisit) showVisitDetail(selectedVisit);
+  else document.getElementById("ss-detail-wrap").innerHTML='<div class="ss-detail-empty"><i class="ti ti-file-search"></i><p>왼쪽에서 라운딩 일자를 선택해 주세요.</p></div>';
 }
 
 function htmlEscape(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
@@ -663,6 +725,13 @@ var HEADER_ALIASES={
   "VM 분석 및 인사이트":["VM 분석 및 인사이트","VM분석 및 인사이트","vm 분석 및 인사이트"],
   "매장 요청사항":["매장 요청사항","매장요청사항","매장 요청 사항"],
   "운영이슈 및 개선사항":["운영이슈 및 개선사항","운영 이슈 및 개선사항","운영이슈및개선사항"]
+};
+var CATEGORY_ICON={
+  "고객동향":"ti-users",
+  "상품 VOC 및 판매 동향":"ti-shopping-bag",
+  "VM 분석 및 인사이트":"ti-bulb",
+  "매장 요청사항":"ti-clipboard-list",
+  "운영이슈 및 개선사항":"ti-alert-triangle"
 };
 function findFeedbackMarkers(body){
   var lower=body.toLowerCase();
@@ -677,6 +746,12 @@ function findFeedbackMarkers(body){
   });
   markers.sort(function(a,b){return a.index-b.index;});
   return markers;
+}
+function extractPct(text){
+  var m=text.match(/(\d{1,3})(?:\s*~\s*\d{1,3})?\s*%/);
+  if(!m) return null;
+  var v=parseInt(m[1],10);
+  return (v>=0&&v<=100)?v:null;
 }
 /* 규칙 기반 자동 요약: 항목별 가중치 + 핵심 키워드 포함 여부로 문장 점수를 매겨 상위 1~2문장을 뽑습니다 */
 function autoSummarize(sections){
@@ -714,64 +789,68 @@ function parseFeedback(raw){
     var title="",bodyTxt=chunk;
     var colonIdx=chunk.search(/[:：]/);
     if(colonIdx>0 && colonIdx<32){ title=chunk.slice(0,colonIdx).trim(); bodyTxt=chunk.slice(colonIdx+1).trim(); }
-    sections.push({label:markers[i].label,title:title,body:bodyTxt});
+    sections.push({label:markers[i].label,title:title,body:bodyTxt,pct:extractPct(chunk)});
   }
   var summary=manualSummary||autoSummarize(sections);
   return {sections:sections, summary:summary, autoGenerated:!manualSummary};
 }
-function monthlyCounts(nm){
-  var map={};
-  schedule.forEach(function(e){ if(e.t===nm){ var k=e.y+"-"+e.m; map[k]=(map[k]||0)+1; } });
-  return Object.keys(map).sort().map(function(k){ var p=k.split("-"); return {y:+p[0],m:+p[1],cnt:map[k]}; });
-}
 
-function showStoreDetail(nm){
-  selectedStore=nm;
-  document.querySelectorAll(".ss-item").forEach(function(el){ el.classList.toggle("active", el.getAttribute("data-store")===nm); });
-  var v=latestVisit(nm);
-  var myReports=reports.filter(function(r){return r.store===nm;}).sort(function(a,b){return toDate(b)-toDate(a);});
-  var t=storeType(nm);
-  var html='<div class="ss-detail-hd"><div><h3>'+nm+'</h3><div class="sub">'+t+' · '+(v?v.m+'/'+v.d+' 최근 일정':'등록된 일정 없음')+'</div></div>'+statusTagHTML(v,true)+'</div>';
+function showVisitDetail(key){
+  selectedVisit=key;
+  document.querySelectorAll(".ss-item").forEach(function(el){ el.classList.toggle("active", el.getAttribute("data-visit")===key); });
+  var e=schedule.find(function(ev){ return storeList.indexOf(ev.t)>=0 && visitKey(ev)===key; });
+  if(!e){ document.getElementById("ss-detail-wrap").innerHTML='<div class="ss-detail-empty"><i class="ti ti-file-search"></i><p>왼쪽에서 라운딩 일자를 선택해 주세요.</p></div>'; return; }
+  var t=storeType(e.t);
+  var html='<div class="ss-big-date">'+e.m+'/'+e.d+'<span class="wd">('+weekdayKR(e.y,e.m,e.d)+')</span></div>'
+    +'<div class="ss-detail-hd" style="margin-top:6px;"><div><h3 style="font-size:15px;">'+e.t+'</h3><div class="sub">'+t+' · '+e.who+'</div></div>'+statusTagHTML(e,false)+'</div>';
 
-  var mc=monthlyCounts(nm);
-  html+='<div class="ss-months">'+(mc.length?mc.map(function(c){return '<span class="mchip">'+c.m+'월 <b>'+c.cnt+'회</b></span>';}).join(""):'<span class="mchip">등록된 라운딩 일정 없음</span>')+'</div>';
+  var rep=e._report;
+  if(rep&&rep.link){ html+='<a class="ss-report-btn" href="'+rep.link+'" target="_blank" rel="noopener"><i class="ti ti-file-text"></i>보고서</a>'; }
+  else{ html+='<span class="ss-report-btn disabled"><i class="ti ti-file-off"></i>보고서 없음</span>'; }
 
-  if(!myReports.length){
-    html+='<div class="ss-summary empty"><div class="lbl"><i class="ti ti-file-off"></i>제출된 보고서 없음</div><p>이 매장은 아직 라운딩 보고서가 등록되지 않았어요. 구글 폼으로 보고서를 제출하면 여기에 자동으로 표시됩니다.</p></div>';
+  if(rep&&rep.scores&&(rep.scores.매장관리!==null||rep.scores.근무상태!==null||rep.scores.디스플레이!==null)){
+    var SCORE_MAX=5;
+    var SCORE_ICON={"매장관리":"ti-building-store","근무상태":"ti-user-check","디스플레이":"ti-layout-grid"};
+    var scoreRows=["매장관리","근무상태","디스플레이"].map(function(k){
+      var v=rep.scores[k];
+      if(v===null) return '';
+      var pct=Math.max(0,Math.min(100,v/SCORE_MAX*100));
+      var color=pct>=80?"#1D9E75":(pct>=50?"#534AB7":"#BA7517");
+      return '<div class="ss-score-row"><i class="ti '+SCORE_ICON[k]+'"></i><span class="lbl">'+k+'</span>'
+        +'<div class="track"><span style="width:'+pct+'%;background:'+color+';"></span></div>'
+        +'<span class="val">'+v+'/'+SCORE_MAX+'</span></div>';
+    }).join("");
+    html+='<div class="ss-scores">'+scoreRows+'</div>';
+  }
+
+  if(!rep){
+    html+='<div class="ss-summary empty"><div class="lbl"><i class="ti ti-sparkles"></i>AI 매장 피드백 요약</div><p>이 라운딩은 아직 보고서가 제출되지 않았어요.</p></div>';
   }else{
-    var latest=myReports[0];
-    if(latest.link){ html+='<a class="ss-report-btn" href="'+latest.link+'" target="_blank" rel="noopener"><i class="ti ti-file-text"></i>'+latest.m+'/'+latest.d+' 제출 보고서 보기</a>'; }
-
-    var pf=parseFeedback(latest.summary);
+    var pf=parseFeedback(rep.summary);
     if(pf.sections.length){
-      html+='<div class="ss-summary"><div class="lbl"><i class="ti ti-sparkles"></i>AI 매장 피드백 요약</div>'
+      html+='<div class="fb-card-grid">'
         +pf.sections.map(function(s){
-          return '<div class="fb-sec"><div class="fb-label">'+htmlEscape(s.label)+'</div>'
-            +(s.title?'<div class="fb-title">'+htmlEscape(s.title)+'</div>':'')
-            +'<div class="fb-body">'+htmlEscape(s.body)+'</div></div>';
+          var icon=CATEGORY_ICON[s.label]||"ti-file-text";
+          return '<div class="fb-card"><div class="fb-card-hd"><i class="ti '+icon+'"></i>'+htmlEscape(s.label)+'</div>'
+            +(s.title?'<div class="fb-card-title">'+htmlEscape(s.title)+'</div>':'')
+            +'<div class="fb-card-body">'+htmlEscape(s.body)+'</div>'
+            +(s.pct!==null?'<div class="fb-pct"><div class="track"><span style="width:'+s.pct+'%;"></span></div><span class="val">'+s.pct+'%</span></div>':'')
+            +'</div>';
         }).join("")
-        +(pf.summary?'<div class="fb-sec" style="border-left-color:var(--accent);"><div class="fb-label">Summary'+(pf.autoGenerated?' · 자동 분석':'')+'</div><div class="fb-body">'+htmlEscape(pf.summary)+'</div></div>':'')
+        +(pf.summary?'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-sparkles"></i>Summary'+(pf.autoGenerated?' · 자동 분석':'')+'</div><div class="fb-card-body">'+htmlEscape(pf.summary)+'</div></div>':'')
         +'</div>';
     }else if(pf.summary){
       html+='<div class="ss-summary"><div class="lbl"><i class="ti ti-sparkles"></i>AI 매장 피드백 요약</div><p>'+htmlEscape(pf.summary)+'</p></div>';
-    }else if(latest.summary){
-      var short=latest.summary.length>150?latest.summary.slice(0,150).trim()+"…":latest.summary;
+    }else if(rep.summary){
+      var short=rep.summary.length>150?rep.summary.slice(0,150).trim()+"…":rep.summary;
       var uid="sm-"+Math.random().toString(36).slice(2,7);
       html+='<div class="ss-summary"><div class="lbl"><i class="ti ti-sparkles"></i>매장 피드백</div>'
         +'<p id="'+uid+'-short">'+htmlEscape(short)+'</p>'
-        +'<p id="'+uid+'-full" style="display:none;white-space:pre-line;">'+htmlEscape(latest.summary)+'</p>'
+        +'<p id="'+uid+'-full" style="display:none;white-space:pre-line;">'+htmlEscape(rep.summary)+'</p>'
         +'<button class="fb-toggle" onclick="var s=document.getElementById(\''+uid+'-short\'),f=document.getElementById(\''+uid+'-full\'),b=this;if(f.style.display===\'none\'){f.style.display=\'\';s.style.display=\'none\';b.textContent=\'접기\';}else{f.style.display=\'none\';s.style.display=\'\';b.textContent=\'전체 피드백 보기\';}">전체 피드백 보기</button>'
         +'</div>';
     }else{
       html+='<div class="ss-summary empty"><div class="lbl"><i class="ti ti-sparkles"></i>매장 피드백</div><p>아직 피드백이 등록되지 않았어요.</p></div>';
-    }
-
-    if(myReports.length>1){
-      html+='<div style="margin-top:16px;"><div class="fb-label" style="font-size:11.5px;font-weight:700;color:var(--ink-3);margin-bottom:6px;">이전 제출 이력</div>'
-        +myReports.slice(1).map(function(r){
-          return '<div class="glance-row"><span class="dt">'+r.m+'/'+r.d+'</span><span class="nm">제출된 보고서</span>'
-            +(r.link?'<a class="rlink" href="'+r.link+'" target="_blank" rel="noopener"><i class="ti ti-external-link"></i>열기</a>':'')+'</div>';
-        }).join("")+'</div>';
     }
   }
   document.getElementById("ss-detail-wrap").innerHTML=html;
@@ -779,7 +858,7 @@ function showStoreDetail(nm){
 
 document.addEventListener("click",function(e){
   var item=e.target.closest(".ss-item");
-  if(item){ showStoreDetail(item.getAttribute("data-store")); }
+  if(item){ showVisitDetail(item.getAttribute("data-visit")); }
   var tabBtn=e.target.closest(".tab-btn");
   if(tabBtn){
     document.querySelectorAll(".tab-btn").forEach(function(b){b.classList.toggle("active",b===tabBtn);});
