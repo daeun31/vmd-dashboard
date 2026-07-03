@@ -505,8 +505,7 @@ function syncIssuesFromReports(){
     pf.sections.forEach(function(s){
       if(s.label!=="매장 요청사항"&&s.label!=="운영이슈 및 개선사항") return;
       extractIssueItems(s.raw).forEach(function(it){
-        var exists=issues.some(function(is){ return issueMatch(is,ev.t,s.label,it.label); });
-        if(!exists){ issues.push({y:ev.y,m:ev.m,d:ev.d,store:ev.t,type:s.label,content:it.label,status:"미해결",due:null}); }
+        registerIssue(ev.t,s.label,it.label,ev);
       });
     });
   });
@@ -794,6 +793,7 @@ function visitKey(e){ return e.y+"-"+e.m+"-"+e.d+"-"+e.t; }
 
 var selectedVisit=null;
 function renderStoreStatusPage(){
+  syncIssuesFromReports();
   var visits=schedule.filter(function(e){return storeList.indexOf(e.t)>=0;}).slice().sort(function(a,b){return toDate(b)-toDate(a);});
   if(selectedVisit===null){
     var withReport=visits.find(function(e){return !!e._report;});
@@ -985,6 +985,7 @@ function showVisitDetail(key){
           if(isActionable){
             var items=extractIssueItems(s.raw);
             var itemsHtml=items.map(function(it){
+              registerIssue(e.t,s.label,it.label,e);
               var curStatus=findIssueStatus(e.t,s.label,it.label);
               return '<div class="fb-issue-item"><div class="fb-issue-top"><div class="fb-issue-label">'+htmlEscape(it.label)+'</div>'
                 +'<div class="fb-seg" data-store="'+attrEscape(e.t)+'" data-type="'+attrEscape(s.label)+'" data-content="'+attrEscape(it.label)+'" data-date="'+dateStr+'">'
@@ -1018,9 +1019,18 @@ function showVisitDetail(key){
     }
   }
   document.getElementById("ss-detail-wrap").innerHTML=html;
+  if(document.getElementById("issue-kpis")) renderIssuesPage();
 }
 
 function issueMatch(is,store,type,content){ return is.store===store && is.type===type && is.content===content; }
+function registerIssue(store,type,content,dateInfo){
+  var exists=issues.some(function(is){ return issueMatch(is,store,type,content); });
+  if(!exists){
+    issues.push({y:dateInfo?dateInfo.y:null,m:dateInfo?dateInfo.m:null,d:dateInfo?dateInfo.d:null,store:store,type:type,content:content,status:"미해결",due:null});
+    return true;
+  }
+  return false;
+}
 function findIssueStatus(store,type,content){
   var found=issues.find(function(is){ return issueMatch(is,store,type,content); });
   return found?found.status:"미해결";
