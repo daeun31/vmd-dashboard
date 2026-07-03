@@ -161,6 +161,7 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .ss-date-hd .wd{color:var(--ink-2);}
 .ss-big-date{font-size:26px;font-weight:800;color:var(--ink);line-height:1.2;}
 .ss-big-date .wd{font-size:15px;font-weight:600;color:var(--ink-3);margin-left:6px;}
+.ss-big-date .tag{vertical-align:middle;margin-left:4px;font-size:12px;padding:3px 10px;}
 .ss-report-btn{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;font-size:13.5px;font-weight:700;padding:10px 18px;border-radius:9px;text-decoration:none;}
 .ss-report-btn i{font-size:16px;}
 .ss-report-btn.disabled{background:var(--bg);color:var(--ink-3);pointer-events:none;}
@@ -206,17 +207,39 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 @media (max-width:600px){.fb-card-grid{grid-template-columns:1fr;}}
 .fb-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
 .fb-card.fb-full{grid-column:1/-1;background:var(--accent-soft);border-color:transparent;}
+.fb-card.fb-summary-inline{background:var(--accent-soft);border-color:transparent;}
 .fb-card-hd{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:7px;}
 .fb-card-hd i{font-size:17px;color:var(--accent);}
-.fb-full .fb-card-hd i{color:var(--accent-deep);}
-.fb-full .fb-card-hd{color:var(--accent-deep);}
+.fb-full .fb-card-hd i,.fb-summary-inline .fb-card-hd i{color:var(--accent-deep);}
+.fb-full .fb-card-hd,.fb-summary-inline .fb-card-hd{color:var(--accent-deep);}
 .fb-card-title{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:3px;}
 .fb-card-body{font-size:12.5px;line-height:1.65;color:var(--ink-2);}
-.fb-full .fb-card-body{color:#3C3489;}
+.fb-full .fb-card-body,.fb-summary-inline .fb-card-body{color:#3C3489;}
 .fb-pct{display:flex;align-items:center;gap:8px;margin-top:9px;}
 .fb-pct .track{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;}
 .fb-pct .track>span{display:block;height:100%;background:var(--accent);border-radius:3px;}
 .fb-pct .val{font-size:11.5px;font-weight:700;color:var(--ink);min-width:34px;text-align:right;}
+.fb-demo{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);}
+.fb-demo-title{font-size:10.5px;font-weight:700;color:var(--ink-3);margin-bottom:5px;}
+.fb-demo-row{margin-bottom:8px;}
+.fb-demo-row:last-child{margin-bottom:0;}
+.fb-demo-bar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--bg);}
+.fb-demo-bar span{display:block;height:100%;}
+.fb-demo-legend{display:flex;justify-content:space-between;margin-top:4px;font-size:10.5px;color:var(--ink-2);}
+.fb-demo-legend span{display:inline-flex;align-items:center;gap:4px;}
+.fb-demo-legend i{width:7px;height:7px;border-radius:50%;display:inline-block;}
+.fb-age-bars{display:flex;flex-direction:column;gap:5px;}
+.fb-age-row{display:flex;align-items:center;gap:8px;}
+.fb-age-row .lbl{font-size:10.5px;color:var(--ink-2);min-width:28px;}
+.fb-age-row .track{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;}
+.fb-age-row .track>span{display:block;height:100%;background:#378ADD;border-radius:3px;}
+.fb-age-row .val{font-size:10.5px;font-weight:700;color:var(--ink);min-width:28px;text-align:right;}
+.fb-age-qual{display:flex;gap:7px;flex-wrap:wrap;}
+.fb-age-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:700;}
+.fb-age-chip.lv-high{background:#534AB7;color:#fff;}
+.fb-age-chip.lv-mid{background:var(--accent-soft);color:var(--accent-deep);}
+.fb-age-chip.lv-low{background:var(--bg);color:var(--ink-3);border:1px solid var(--line);}
+.fb-age-chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
 .fb-toggle{background:transparent;border:1px solid var(--line);border-radius:8px;font-size:12px;font-weight:600;color:var(--ink-2);padding:6px 12px;cursor:pointer;margin-top:4px;}
 footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
 </style>
@@ -872,6 +895,50 @@ function extractPct(text){
   var v=parseInt(m[1],10);
   return (v>=0&&v<=100)?v:null;
 }
+function pctNear(text,keyword){
+  var re=new RegExp(keyword+"[^%,.;]{0,20}?(\\d{1,3})(?:\\s*~\\s*(\\d{1,3}))?\\s*%");
+  var m=text.match(re);
+  if(!m) return null;
+  var v=m[2]?Math.round((parseInt(m[1],10)+parseInt(m[2],10))/2):parseInt(m[1],10);
+  return (v>=0&&v<=100)?v:null;
+}
+function extractDemographics(text){
+  var foreign=pctNear(text,"외국인");
+  var domestic=pctNear(text,"내국인|국내");
+  if(foreign!==null&&domestic===null) domestic=100-foreign;
+  if(domestic!==null&&foreign===null) foreign=100-domestic;
+
+  var ageRe=/(\d{1,2})\s*대[^%,.;]{0,15}?(\d{1,3})(?:\s*~\s*(\d{1,3}))?\s*%/g;
+  var ageGroups=[],am;
+  while((am=ageRe.exec(text))){
+    var v=am[3]?Math.round((parseInt(am[2],10)+parseInt(am[3],10))/2):parseInt(am[2],10);
+    if(v>=0&&v<=100) ageGroups.push({label:am[1]+"대",pct:v});
+  }
+  var ageQual=[];
+  if(!ageGroups.length){
+    var qualRe=/(\d{1,2})\s*대[^,.;%]{0,15}?(많은\s*편|많음|위주|중심|우세|높은\s*편|비중이\s*높|주로|대부분|다수|보통|평균적|적은\s*편|적음|낮은\s*편|비중이\s*낮|소수)/g;
+    var LOW=/적은\s*편|적음|낮은\s*편|비중이\s*낮|소수/, MED=/보통|평균적/, qm;
+    while((qm=qualRe.exec(text))){
+      var level=LOW.test(qm[2])?"적음":(MED.test(qm[2])?"보통":"많음");
+      ageQual.push({label:qm[1]+"대",level:level});
+    }
+  }
+
+  var female=pctNear(text,"여성");
+  var male=pctNear(text,"남성");
+  if(female!==null&&male===null) male=100-female;
+  if(male!==null&&female===null) female=100-male;
+
+  return {
+    foreign:foreign, domestic:domestic,
+    ageGroups:ageGroups, ageQual:ageQual,
+    female:female, male:male
+  };
+}
+function demoBarHTML(leftLabel,leftPct,leftColor,rightLabel,rightPct,rightColor){
+  return '<div class="fb-demo-row"><div class="fb-demo-bar"><span style="width:'+leftPct+'%;background:'+leftColor+';"></span><span style="width:'+rightPct+'%;background:'+rightColor+';"></span></div>'
+    +'<div class="fb-demo-legend"><span><i style="background:'+leftColor+';"></i>'+leftLabel+' '+leftPct+'%</span><span><i style="background:'+rightColor+';"></i>'+rightLabel+' '+rightPct+'%</span></div></div>';
+}
 /* 규칙 기반 자동 요약: 항목별 가중치 + 핵심 키워드 포함 여부로 문장 점수를 매겨 상위 1~2문장을 뽑습니다 */
 function autoSummarize(sections){
   var WEIGHT={"매장 요청사항":3,"운영이슈 및 개선사항":3,"VM 분석 및 인사이트":2,"상품 VOC 및 판매 동향":2,"고객동향":1};
@@ -947,9 +1014,9 @@ function showVisitDetail(key){
 
   var html='<div class="ss-store-hd"><i class="ti '+(TYPE_ICON[t]||'ti-building-store')+'"></i><h2>'+e.t+'</h2></div>'
     +'<div class="ss-date-section">'
-      +'<div><div class="ss-big-date">'+e.m+'/'+e.d+'<span class="wd">('+weekdayKR(e.y,e.m,e.d)+')</span></div>'
+      +'<div><div class="ss-big-date">'+e.m+'/'+e.d+'<span class="wd">('+weekdayKR(e.y,e.m,e.d)+')</span> '+statusTagHTML(e,false)+'</div>'
       +'<div class="sub">'+t+' · '+e.who+(e._adhoc?' · <span style="color:var(--amber-deep);font-weight:700;">일정 외 등록</span>':'')+'</div></div>'
-      +'<div class="ss-date-right">'+statusTagHTML(e,false)+reportBtn+'</div>'
+      +'<div class="ss-date-right">'+reportBtn+'</div>'
     +'</div>';
 
   if(rep&&rep.scores&&(rep.scores.매장관리!==null||rep.scores.근무상태!==null||rep.scores.디스플레이!==null)){
@@ -977,33 +1044,50 @@ function showVisitDetail(key){
   }else{
     var pf=parseFeedback(rep.summary);
     if(pf.sections.length){
-      html+='<div class="fb-card-grid">'
-        +pf.sections.map(function(s){
-          var icon=CATEGORY_ICON[s.label]||"ti-file-text";
-          var isActionable=(s.label==="매장 요청사항"||s.label==="운영이슈 및 개선사항");
-          var dateStr=e.y+"-"+e.m+"-"+e.d;
-          if(isActionable){
-            var items=extractIssueItems(s.raw);
-            var itemsHtml=items.map(function(it){
-              registerIssue(e.t,s.label,it.label,e);
-              var curStatus=findIssueStatus(e.t,s.label,it.label);
-              return '<div class="fb-issue-item"><div class="fb-issue-top"><div class="fb-issue-label">'+htmlEscape(it.label)+'</div>'
-                +'<div class="fb-seg" data-store="'+attrEscape(e.t)+'" data-type="'+attrEscape(s.label)+'" data-content="'+attrEscape(it.label)+'" data-date="'+dateStr+'">'
-                +'<button class="seg-btn'+(curStatus==="미해결"?" active bad":"")+'" data-set="미해결">미해결</button>'
-                +'<button class="seg-btn'+(curStatus==="완료"?" active good":"")+'" data-set="완료">해결</button>'
-                +'</div></div>'
-                +'<div class="fb-issue-detail">'+htmlEscape(it.detail)+'</div></div>';
-            }).join("");
-            return '<div class="fb-card fb-issue-card"><div class="fb-card-hd"><i class="ti '+icon+'"></i>'+htmlEscape(s.label)+'</div>'+itemsHtml+'</div>';
-          }
-          return '<div class="fb-card"><div class="fb-card-hd"><i class="ti '+icon+'"></i>'+htmlEscape(s.label)+'</div>'
-            +(s.title?'<div class="fb-card-title">'+htmlEscape(s.title)+'</div>':'')
-            +'<div class="fb-card-body">'+htmlEscape(s.body)+'</div>'
-            +(s.pct!==null?'<div class="fb-pct"><div class="track"><span style="width:'+s.pct+'%;"></span></div><span class="val">'+s.pct+'%</span></div>':'')
-            +'</div>';
-        }).join("")
-        +(pf.summary?'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-sparkles"></i>Summary'+(pf.autoGenerated?' · 자동 분석':'')+'</div><div class="fb-card-body">'+htmlEscape(pf.summary)+'</div></div>':'')
-        +'</div>';
+      var normalHtml=[], actionHtml=[], summaryInserted=false;
+      var summaryCardHtml=pf.summary?('<div class="fb-card fb-summary-inline"><div class="fb-card-hd"><i class="ti ti-sparkles"></i>Summary'+(pf.autoGenerated?' · 자동 분석':'')+'</div><div class="fb-card-body">'+htmlEscape(pf.summary)+'</div></div>'):"";
+      pf.sections.forEach(function(s){
+        var icon=CATEGORY_ICON[s.label]||"ti-file-text";
+        var isActionable=(s.label==="매장 요청사항"||s.label==="운영이슈 및 개선사항");
+        var dateStr=e.y+"-"+e.m+"-"+e.d;
+        if(isActionable){
+          var items=extractIssueItems(s.raw);
+          var itemsHtml=items.map(function(it){
+            registerIssue(e.t,s.label,it.label,e);
+            var curStatus=findIssueStatus(e.t,s.label,it.label);
+            return '<div class="fb-issue-item"><div class="fb-issue-top"><div class="fb-issue-label">'+htmlEscape(it.label)+'</div>'
+              +'<div class="fb-seg" data-store="'+attrEscape(e.t)+'" data-type="'+attrEscape(s.label)+'" data-content="'+attrEscape(it.label)+'" data-date="'+dateStr+'">'
+              +'<button class="seg-btn'+(curStatus==="미해결"?" active bad":"")+'" data-set="미해결">미해결</button>'
+              +'<button class="seg-btn'+(curStatus==="완료"?" active good":"")+'" data-set="완료">해결</button>'
+              +'</div></div>'
+              +'<div class="fb-issue-detail">'+htmlEscape(it.detail)+'</div></div>';
+          }).join("");
+          actionHtml.push('<div class="fb-card fb-issue-card"><div class="fb-card-hd"><i class="ti '+icon+'"></i>'+htmlEscape(s.label)+'</div>'+itemsHtml+'</div>');
+          return;
+        }
+        var demoHtml="";
+        if(s.label==="고객동향"){
+          var demo=extractDemographics(s.raw);
+          var rows=[];
+          if(demo.foreign!==null&&demo.domestic!==null) rows.push('<div class="fb-demo-title">내/외국인 비중</div>'+demoBarHTML("내국인",demo.domestic,"#378ADD","외국인",demo.foreign,"#534AB7"));
+          if(demo.ageGroups.length) rows.push('<div class="fb-demo-title" style="margin-top:10px;">연령대 비중</div><div class="fb-age-bars">'+demo.ageGroups.map(function(a){return '<div class="fb-age-row"><span class="lbl">'+a.label+'</span><div class="track"><span style="width:'+a.pct+'%;"></span></div><span class="val">'+a.pct+'%</span></div>';}).join("")+'</div>');
+          else if(demo.ageQual.length) rows.push('<div class="fb-demo-title" style="margin-top:10px;">연령대 비중 (정성 평가)</div><div class="fb-age-qual">'+demo.ageQual.map(function(a){
+            var cls=a.level==="많음"?"lv-high":(a.level==="보통"?"lv-mid":"lv-low");
+            return '<span class="fb-age-chip '+cls+'"><span class="dot"></span>'+a.label+' '+a.level+'</span>';
+          }).join("")+'</div>');
+          if(demo.female!==null&&demo.male!==null) rows.push('<div class="fb-demo-title" style="margin-top:10px;">성별 비중</div>'+demoBarHTML("여성",demo.female,"#D4537E","남성",demo.male,"#378ADD"));
+          if(rows.length) demoHtml='<div class="fb-demo">'+rows.join("")+'</div>';
+        }
+        normalHtml.push('<div class="fb-card"><div class="fb-card-hd"><i class="ti '+icon+'"></i>'+htmlEscape(s.label)+'</div>'
+          +(s.title?'<div class="fb-card-title">'+htmlEscape(s.title)+'</div>':'')
+          +'<div class="fb-card-body">'+htmlEscape(s.body)+'</div>'
+          +(s.pct!==null?'<div class="fb-pct"><div class="track"><span style="width:'+s.pct+'%;"></span></div><span class="val">'+s.pct+'%</span></div>':'')
+          +demoHtml
+          +'</div>');
+        if(s.label==="VM 분석 및 인사이트"&&summaryCardHtml){ normalHtml.push(summaryCardHtml); summaryInserted=true; }
+      });
+      if(summaryCardHtml&&!summaryInserted) normalHtml.push(summaryCardHtml);
+      html+='<div class="fb-card-grid">'+normalHtml.join("")+actionHtml.join("")+'</div>';
     }else if(pf.summary){
       html+='<div class="ss-summary"><div class="lbl"><i class="ti ti-sparkles"></i>AI 매장 피드백 요약</div><p>'+htmlEscape(pf.summary)+'</p></div>';
     }else if(rep.summary){
