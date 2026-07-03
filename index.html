@@ -635,7 +635,22 @@ var STORE_CITY={
   "LF스퀘어 광양점":"광양","타임스퀘어 영등포점":"서울","롯데 아울렛 서울역":"서울",
   "롯데 아쿠아몰 광복점":"부산"
 };
-function cityOfStore(nm){ return STORE_CITY[nm]||"서울"; }
+function cityOfStore(nm){
+  if(!nm) return "서울";
+  if(/대전/.test(nm)) return "대전";
+  if(/인천|송도/.test(nm)) return "인천";
+  if(/광주/.test(nm)) return "광주";
+  if(/청주/.test(nm)) return "청주";
+  if(/부산|센텀|광복/.test(nm)) return "부산";
+  if(/김해/.test(nm)) return "김해";
+  if(/고양/.test(nm)) return "고양";
+  if(/평촌|안양/.test(nm)) return "안양";
+  if(/파주|운정/.test(nm)) return "파주";
+  if(/광양/.test(nm)) return "광양";
+  if(/의정부/.test(nm)) return "의정부";
+  if(/남양주|space\s?1/i.test(nm)) return "남양주";
+  return STORE_CITY[nm]||"서울";
+}
 var weatherCache={};
 function weatherVisual(code){
   if(code===0) return {icon:"ti-sun",color:"#F5A623"};
@@ -648,8 +663,8 @@ function weatherVisual(code){
 }
 function applyWeatherToDOM(){
   document.querySelectorAll(".wgrp").forEach(function(el){
-    var city=el.getAttribute("data-city"), date=el.getAttribute("data-date");
-    var cache=weatherCache[city]; var w=cache?cache[date]:null;
+    var city=el.getAttribute("data-city"), date=el.getAttribute("data-date"), mk=el.getAttribute("data-mkey");
+    var cache=weatherCache[city+"|"+mk]; var w=cache?cache[date]:null;
     if(!w) return;
     var v=weatherVisual(w.code);
     el.querySelector(".wi").outerHTML='<i class="ti '+v.icon+' wi" style="color:'+v.color+';"></i>';
@@ -657,25 +672,28 @@ function applyWeatherToDOM(){
     el.querySelector(".cw-hi").textContent=w.tmax+"°";
   });
 }
-function fetchCityWeather(city,start,end){
+function fetchCityWeather(city,mk,start,end){
   var c=CITY_COORDS[city]||CITY_COORDS["서울"];
   var url="https://api.open-meteo.com/v1/forecast?latitude="+c.lat+"&longitude="+c.lon
-    +"&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Asia%2FSeoul&start_date="+start+"&end_date="+end;
+    +"&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Asia%2FSeoul&start_date="+start+"&end_date="+end;
   return fetch(url).then(function(r){return r.json();}).then(function(data){
     var map={};
-    if(data&&data.daily&&data.daily.time){
-      data.daily.time.forEach(function(d,i){
-        map[d]={tmax:Math.round(data.daily.temperature_2m_max[i]),tmin:Math.round(data.daily.temperature_2m_min[i]),code:data.daily.weathercode[i]};
+    var d=data&&data.daily;
+    var codes=d&&(d.weather_code||d.weathercode);
+    if(d&&d.time&&codes){
+      d.time.forEach(function(dt,i){
+        map[dt]={tmax:Math.round(d.temperature_2m_max[i]),tmin:Math.round(d.temperature_2m_min[i]),code:codes[i]};
       });
     }
-    weatherCache[city]=map;
-  }).catch(function(){ weatherCache[city]=weatherCache[city]||{}; });
+    weatherCache[city+"|"+mk]=map;
+  }).catch(function(){ weatherCache[city+"|"+mk]=weatherCache[city+"|"+mk]||{}; });
 }
 function loadWeatherForCities(cities,Y,M){
+  var mk=Y+"-"+M;
   var days=new Date(Y,M,0).getDate();
   var pad=function(n){return String(n).padStart(2,"0");};
   var start=Y+"-"+pad(M)+"-01", end=Y+"-"+pad(M)+"-"+pad(days);
-  var jobs=cities.filter(function(c){return !weatherCache[c];}).map(function(c){return fetchCityWeather(c,start,end);});
+  var jobs=cities.filter(function(c){return !weatherCache[c+"|"+mk];}).map(function(c){return fetchCityWeather(c,mk,start,end);});
   Promise.all(jobs).then(applyWeatherToDOM);
 }
 
@@ -717,7 +735,7 @@ function renderMonth(key){
     if(otherCity) neededCities[otherCity]=true;
     var wCities=["서울"].concat(otherCity?[otherCity]:[]);
     var weatherHtml='<div class="cal-weather">'+wCities.map(function(c,i){
-      return '<span class="wgrp" data-city="'+c+'" data-date="'+dateStr+'">'+(i>0?'<span class="city">'+c+'</span>':'')+'<i class="ti wi"></i><span class="cw-lo"></span><span class="cw-hi"></span></span>';
+      return '<span class="wgrp" data-city="'+c+'" data-date="'+dateStr+'" data-mkey="'+Y+'-'+M+'">'+(i>0?'<span class="city">'+c+'</span>':'')+'<i class="ti wi"></i><span class="cw-lo"></span><span class="cw-hi"></span></span>';
     }).join("")+'</div>';
     html+='<div class="day'+(today?' today':'')+(hol?' holiday':'')+'"><div class="num">'+d+'</div>'
       +(hol?'<span class="hol" title="'+hol+'">'+hol+'</span>':'')
