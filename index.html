@@ -14,6 +14,8 @@
 var SCHEDULE_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBwhOpIFBkqqZ5MNfh9hHOCjRlb7E2L2wZ5Y5biQmAZolWIzKnArYbZk-jDP4d5Z1T53AJVs7g/pub?gid=2038188993&single=true&output=csv";   /* 일정 시트 CSV 주소 (필수) */
 var STORES_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBwhOpIFBkqqZ5MNfh9hHOCjRlb7E2L2wZ5Y5biQmAZolWIzKnArYbZk-jDP4d5Z1T53AJVs7g/pub?gid=743461190&single=true&output=csv";   /* 매장 목록 시트 CSV 주소 (선택, 비우면 내장 목록 사용) */
 var REPORTS_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLFIrSatd-0vtueexT2y4uZQf4O1icT8EXm5JT7DhP91DK7bPbRlRCNJrE_VlnTBStx5xfXvrsu74I/pub?gid=2118325494&single=true&output=csv";   /* 라운딩 보고서 제출현황 시트 CSV 주소 (선택, 구글폼 응답 시트를 웹에 게시해서 연결. 비워두면 이전처럼 날짜 경과만으로 완료 표시) */
+var ISSUES_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLFIrSatd-0vtueexT2y4uZQf4O1icT8EXm5JT7DhP91DK7bPbRlRCNJrE_VlnTBStx5xfXvrsu74I/pub?gid=465377158&single=true&output=csv";   /* 이슈트래커 시트 CSV 주소 (선택). 열 구성: 등록일 | 매장명 | 구분 | 내용 | 상태 | 조치예정일 */
+var ISSUE_UPDATE_URL = "https://script.google.com/macros/s/AKfycbyHimUg704plGR6IXjHqFjFC6IuEmRf_SF6zxX-i7iaEJvY9xeFwTMfffBni8LIHevs/exec";   /* 이슈 상태를 시트에 저장하는 Apps Script 웹앱 URL (선택, 비우면 화면에서만 임시로 반영됩니다) */
 </script>
 <style>
 :root{
@@ -132,6 +134,12 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .ss-detail-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
 .ss-detail-hd h3{font-size:17px;font-weight:700;color:var(--ink);}
 .ss-detail-hd .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px;}
+.ss-store-hd{display:flex;align-items:center;gap:9px;margin-bottom:12px;}
+.ss-store-hd i{font-size:22px;color:var(--accent);}
+.ss-store-hd h2{font-size:20px;font-weight:800;color:var(--ink);}
+.ss-date-section{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px;flex-wrap:wrap;gap:12px;}
+.ss-date-section .sub{font-size:12.5px;color:var(--ink-3);margin-top:4px;}
+.ss-date-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
 .ss-report{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px;}
 .ss-report .rhd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .ss-report .rhd .rdt{font-size:12.5px;font-weight:700;color:var(--ink);}
@@ -153,9 +161,33 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .ss-date-hd .wd{color:var(--ink-2);}
 .ss-big-date{font-size:26px;font-weight:800;color:var(--ink);line-height:1.2;}
 .ss-big-date .wd{font-size:15px;font-weight:600;color:var(--ink-3);margin-left:6px;}
-.ss-report-btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;padding:13px 22px;border-radius:10px;text-decoration:none;margin:14px 0 18px;}
-.ss-report-btn i{font-size:18px;}
+.ss-report-btn{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;font-size:13.5px;font-weight:700;padding:10px 18px;border-radius:9px;text-decoration:none;}
+.ss-report-btn i{font-size:16px;}
 .ss-report-btn.disabled{background:var(--bg);color:var(--ink-3);pointer-events:none;}
+.issue-grp{margin-bottom:18px;}
+.issue-grp:last-child{margin-bottom:0;}
+.issue-grp-hd{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;padding-bottom:8px;border-bottom:2px solid var(--line);margin-bottom:8px;}
+.issue-grp-hd .dot{width:9px;height:9px;border-radius:50%;}
+.issue-grp-hd .cnt{margin-left:auto;font-size:12px;font-weight:600;color:var(--ink-3);}
+.issue-row{display:flex;align-items:flex-start;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);}
+.issue-row:last-child{border-bottom:none;}
+.issue-row .icon{font-size:16px;color:var(--accent);margin-top:2px;}
+.issue-row .body{flex:1;}
+.issue-row .meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-3);margin-bottom:3px;}
+.issue-row .txt{font-size:13px;color:var(--ink);line-height:1.55;}
+.issue-row .due{font-size:11.5px;color:var(--amber-deep);margin-top:3px;}
+.issue-row .due.overdue{color:var(--red-deep);font-weight:700;}
+.fb-copy-btn{background:transparent;border:1px solid var(--line);border-radius:7px;font-size:11px;font-weight:600;color:var(--ink-2);padding:5px 10px;cursor:pointer;margin-top:8px;display:inline-flex;align-items:center;gap:4px;}
+.fb-copy-btn i{font-size:13px;}
+.fb-copy-btn.copied{color:var(--green-deep);border-color:var(--green);}
+.fb-status{display:flex;align-items:center;gap:8px;margin-top:10px;}
+.fb-status .fb-status-lbl{font-size:11px;color:var(--ink-3);}
+.fb-seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.seg-btn{font-family:inherit;background:var(--card);border:none;font-size:11.5px;font-weight:700;color:var(--ink-3);padding:6px 12px;cursor:pointer;}
+.seg-btn+.seg-btn{border-left:1px solid var(--line);}
+.seg-btn.active.bad{background:var(--red-soft);color:var(--red-deep);}
+.seg-btn.active.good{background:var(--green-soft);color:var(--green-deep);}
+.fb-status-saved{font-size:10.5px;color:var(--ink-3);}
 .ss-score-panel{display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 16px 18px;border:1px solid var(--line);border-radius:14px;margin:14px 0 16px;}
 .ss-score-chips{display:flex;gap:10px;margin-top:16px;justify-content:center;flex-wrap:wrap;width:100%;}
 .ss-score-chip{background:var(--bg);border-radius:10px;padding:9px 16px;min-width:88px;}
@@ -192,6 +224,7 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
 <div class="tabs">
   <button class="tab-btn active" id="tab-dashboard" data-page="dashboard">Dashboard</button>
   <button class="tab-btn" id="tab-store-status" data-page="store-status">매장별 라운딩현황</button>
+  <button class="tab-btn" id="tab-issues" data-page="issues">이슈 트래커</button>
 </div>
 
 <div class="wrap" id="page-dashboard">
@@ -255,6 +288,22 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
         <p>왼쪽에서 매장을 선택해 주세요.</p>
       </div>
     </div>
+  </section>
+</div>
+
+<div class="wrap" id="page-issues" style="display:none;">
+  <div class="page-head">
+    <div>
+      <h1>이슈 트래커</h1>
+      <p>매장 요청사항 · 운영이슈 및 개선사항의 조치 현황을 관리해요.</p>
+    </div>
+  </div>
+
+  <section class="kpis" id="issue-kpis"></section>
+
+  <section class="card">
+    <h2><i class="ti ti-list-check"></i>이슈 목록</h2>
+    <div id="issue-list"></div>
   </section>
 </div>
 
@@ -332,7 +381,7 @@ function parseDate(s){
   return {y:+m[1],m:+m[2],d:+m[3]};
 }
 
-var schedule=[], storeList=[], reports=[], usingSample=false, useReportStatus=false;
+var schedule=[], storeList=[], reports=[], issues=[], usingSample=false, useReportStatus=false;
 
 function normalize(rows){
   var out=[];
@@ -370,6 +419,41 @@ function normalizeReports(rows){
     if(!dt||!store) continue;
     out.push({y:dt.y,m:dt.m,d:dt.d,store:store,link:linkCol>=0?(row[linkCol]||"").trim():"",summary:sumCol>=0?(row[sumCol]||"").trim():"",
       scores:{매장관리:findNum(row,mgmtCol),근무상태:findNum(row,workCol),디스플레이:findNum(row,dispCol)}});
+  }
+  return out;
+}
+
+function normalizeIssues(rows){
+  if(!rows.length) return [];
+  var header=rows[0].map(function(c){return (c||"").toLowerCase();});
+  var headerLoose=header.map(function(h){return h.replace(/\s+/g,"");});
+  function findCol(keys){
+    var keysLoose=keys.map(function(k){return k.replace(/\s+/g,"");});
+    for(var i=0;i<header.length;i++){ if(keys.indexOf(header[i])>=0) return i; }
+    for(var i=0;i<headerLoose.length;i++){ for(var k=0;k<keysLoose.length;k++){ if(headerLoose[i].indexOf(keysLoose[k])>=0) return i; } }
+    return -1;
+  }
+  var dateCol=findCol(["등록일","일자","date"]);
+  var storeCol=findCol(["매장명","매장"]);
+  var typeCol=findCol(["구분","분류"]);
+  var contentCol=findCol(["내용"]);
+  var statusCol=findCol(["상태"]);
+  var dueCol=findCol(["조치예정일","조치예정","예정일"]);
+  var out=[];
+  for(var r=1;r<rows.length;r++){
+    var row=rows[r];
+    var dt=dateCol>=0?parseDate(row[dateCol]):null;
+    var content=contentCol>=0?(row[contentCol]||"").trim():"";
+    if(!content) continue;
+    var due=dueCol>=0?parseDate(row[dueCol]):null;
+    out.push({
+      y:dt?dt.y:null, m:dt?dt.m:null, d:dt?dt.d:null,
+      store:storeCol>=0?(row[storeCol]||"").trim():"",
+      type:typeCol>=0?(row[typeCol]||"").trim():"",
+      content:content,
+      status:(statusCol>=0?(row[statusCol]||"").trim():"")||"미해결",
+      due:due
+    });
   }
   return out;
 }
@@ -473,6 +557,7 @@ function render(){
 
   renderStores();
   renderStoreStatusPage();
+  renderIssuesPage();
   renderMonth(sel.value);
 }
 
@@ -728,6 +813,7 @@ function renderStoreStatusPage(){
 }
 
 function htmlEscape(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function attrEscape(s){ return htmlEscape(s).replace(/"/g,"&quot;"); }
 /* 매장 라운딩 보고서 마지막 페이지의 고정 5개 항목명 (정확히 이 표현 기준으로 인식) */
 var HEADER_ALIASES={
   "고객동향":["고객동향","고객 동향"],
@@ -811,12 +897,17 @@ function showVisitDetail(key){
   var e=schedule.find(function(ev){ return storeList.indexOf(ev.t)>=0 && visitKey(ev)===key; });
   if(!e){ document.getElementById("ss-detail-wrap").innerHTML='<div class="ss-detail-empty"><i class="ti ti-file-search"></i><p>왼쪽에서 라운딩 일자를 선택해 주세요.</p></div>'; return; }
   var t=storeType(e.t);
-  var html='<div class="ss-big-date">'+e.m+'/'+e.d+'<span class="wd">('+weekdayKR(e.y,e.m,e.d)+')</span>'
-    +(e._adhoc?'<span class="wd" style="color:var(--amber-deep);background:var(--amber-soft);padding:2px 9px;border-radius:20px;font-weight:700;">일정 외 등록</span>':'')
-    +'</div>'
-    +'<div class="ss-detail-hd" style="margin-top:6px;"><div><h3 style="font-size:15px;">'+e.t+'</h3><div class="sub">'+t+' · '+e.who+'</div></div>'+statusTagHTML(e,false)+'</div>';
-
   var rep=e._report;
+  var reportBtn=(rep&&rep.link)
+    ?'<a class="ss-report-btn" href="'+rep.link+'" target="_blank" rel="noopener"><i class="ti ti-file-text"></i>보고서</a>'
+    :'<span class="ss-report-btn disabled"><i class="ti ti-file-off"></i>보고서 없음</span>';
+
+  var html='<div class="ss-store-hd"><i class="ti '+(TYPE_ICON[t]||'ti-building-store')+'"></i><h2>'+e.t+'</h2></div>'
+    +'<div class="ss-date-section">'
+      +'<div><div class="ss-big-date">'+e.m+'/'+e.d+'<span class="wd">('+weekdayKR(e.y,e.m,e.d)+')</span></div>'
+      +'<div class="sub">'+t+' · '+e.who+(e._adhoc?' · <span style="color:var(--amber-deep);font-weight:700;">일정 외 등록</span>':'')+'</div></div>'
+      +'<div class="ss-date-right">'+statusTagHTML(e,false)+reportBtn+'</div>'
+    +'</div>';
 
   if(rep&&rep.scores&&(rep.scores.매장관리!==null||rep.scores.근무상태!==null||rep.scores.디스플레이!==null)){
     var SCORE_MAX=5;
@@ -838,9 +929,6 @@ function showVisitDetail(key){
     html+='<div class="ss-score-panel">'+ring+'<div class="ss-score-chips">'+chips+'</div></div>';
   }
 
-  if(rep&&rep.link){ html+='<a class="ss-report-btn" href="'+rep.link+'" target="_blank" rel="noopener"><i class="ti ti-file-text"></i>보고서</a>'; }
-  else{ html+='<span class="ss-report-btn disabled"><i class="ti ti-file-off"></i>보고서 없음</span>'; }
-
   if(!rep){
     html+='<div class="ss-summary empty"><div class="lbl"><i class="ti ti-sparkles"></i>AI 매장 피드백 요약</div><p>이 라운딩은 아직 보고서가 제출되지 않았어요.</p></div>';
   }else{
@@ -849,10 +937,22 @@ function showVisitDetail(key){
       html+='<div class="fb-card-grid">'
         +pf.sections.map(function(s){
           var icon=CATEGORY_ICON[s.label]||"ti-file-text";
+          var isActionable=(s.label==="매장 요청사항"||s.label==="운영이슈 및 개선사항");
+          var content=(s.title?s.title+": ":"")+s.body;
+          var dateStr=e.y+"-"+e.m+"-"+e.d;
+          var curStatus=isActionable?findIssueStatus(e.t,s.label,content):null;
+          var statusBlock="";
+          if(isActionable){
+            statusBlock='<div class="fb-status"><span class="fb-status-lbl">조치 상태</span><div class="fb-seg" data-store="'+attrEscape(e.t)+'" data-type="'+attrEscape(s.label)+'" data-content="'+attrEscape(content)+'" data-date="'+dateStr+'">'
+              +'<button class="seg-btn'+(curStatus==="미해결"?" active bad":"")+'" data-set="미해결">미해결</button>'
+              +'<button class="seg-btn'+(curStatus==="완료"?" active good":"")+'" data-set="완료">해결</button>'
+              +'</div></div>';
+          }
           return '<div class="fb-card"><div class="fb-card-hd"><i class="ti '+icon+'"></i>'+htmlEscape(s.label)+'</div>'
             +(s.title?'<div class="fb-card-title">'+htmlEscape(s.title)+'</div>':'')
             +'<div class="fb-card-body">'+htmlEscape(s.body)+'</div>'
             +(s.pct!==null?'<div class="fb-pct"><div class="track"><span style="width:'+s.pct+'%;"></span></div><span class="val">'+s.pct+'%</span></div>':'')
+            +statusBlock
             +'</div>';
         }).join("")
         +(pf.summary?'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-sparkles"></i>Summary'+(pf.autoGenerated?' · 자동 분석':'')+'</div><div class="fb-card-body">'+htmlEscape(pf.summary)+'</div></div>':'')
@@ -874,6 +974,64 @@ function showVisitDetail(key){
   document.getElementById("ss-detail-wrap").innerHTML=html;
 }
 
+function issueMatch(is,store,type,content){ return is.store===store && is.type===type && is.content===content; }
+function findIssueStatus(store,type,content){
+  var found=issues.find(function(is){ return issueMatch(is,store,type,content); });
+  return found?found.status:"미해결";
+}
+function setIssueStatus(store,type,content,dateStr,status){
+  var found=issues.find(function(is){ return issueMatch(is,store,type,content); });
+  if(found){ found.status=status; }
+  else{ issues.push({y:null,m:null,d:null,store:store,type:type,content:content,status:status,due:null}); }
+  if(ISSUE_UPDATE_URL){
+    var qs="action=setStatus&store="+encodeURIComponent(store)+"&type="+encodeURIComponent(type)
+      +"&content="+encodeURIComponent(content)+"&status="+encodeURIComponent(status)+"&date="+encodeURIComponent(dateStr);
+    fetch(ISSUE_UPDATE_URL+"?"+qs,{mode:"no-cors"}).catch(function(){});
+  }
+  renderIssuesPage();
+}
+
+var ISSUE_STATUS_ORDER=["미해결","진행중","완료"];
+var ISSUE_STATUS_COLOR={"미해결":"#C0392B","진행중":"#BA7517","완료":"#1D9E75"};
+var ISSUE_TYPE_ICON={"매장요청사항":"ti-clipboard-list","운영이슈 및 개선사항":"ti-alert-triangle"};
+function renderIssuesPage(){
+  var today=new Date(TY,TM-1,TD);
+  var counts={"미해결":0,"진행중":0,"완료":0};
+  issues.forEach(function(is){ counts[is.status]=(counts[is.status]||0)+1; });
+  var total=issues.length;
+  document.getElementById("issue-kpis").innerHTML=
+    '<div class="kpi"><div class="lbl">전체 이슈</div><div class="val">'+total+'건</div><div class="sub">이슈트래커 시트 기준</div></div>'
+    +'<div class="kpi"><div class="lbl">미해결</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["미해결"]+';">'+(counts["미해결"]||0)+'건</div><div class="sub bad">우선 확인 필요</div></div>'
+    +'<div class="kpi"><div class="lbl">진행중</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["진행중"]+';">'+(counts["진행중"]||0)+'건</div><div class="sub">조치 진행 중</div></div>'
+    +'<div class="kpi"><div class="lbl">완료</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["완료"]+';">'+(counts["완료"]||0)+'건</div><div class="sub">조치 완료</div></div>';
+
+  if(!issues.length){
+    document.getElementById("issue-list").innerHTML='<p style="font-size:13px;color:var(--ink-3);">아직 등록된 이슈가 없어요. 이슈트래커 시트에 항목을 추가하거나, 매장별 라운딩현황의 피드백 카드에서 "이슈로 복사" 버튼으로 옮겨 붙여넣어보세요.</p>';
+    return;
+  }
+  document.getElementById("issue-list").innerHTML=ISSUE_STATUS_ORDER.map(function(st){
+    var list=issues.filter(function(is){return is.status===st;}).sort(function(a,b){
+      var da=a.y?toDate(a):new Date(0), db=b.y?toDate(b):new Date(0);
+      return db-da;
+    });
+    if(!list.length) return "";
+    return '<div class="issue-grp"><div class="issue-grp-hd"><span class="dot" style="background:'+ISSUE_STATUS_COLOR[st]+';"></span>'+st+'<span class="cnt">'+list.length+'건</span></div>'
+      +list.map(function(is){
+        var icon=ISSUE_TYPE_ICON[is.type]||"ti-file-text";
+        var dueTxt="";
+        if(is.due){
+          var overdue=toDate(is.due)<today && st!=="완료";
+          dueTxt='<div class="due'+(overdue?' overdue':'')+'">조치예정 '+is.due.m+'/'+is.due.d+(overdue?' · 기한 경과':'')+'</div>';
+        }
+        return '<div class="issue-row"><i class="ti '+icon+' icon"></i><div class="body">'
+          +'<div class="meta">'+(is.store?'<b style="color:var(--ink);">'+htmlEscape(is.store)+'</b>':'')+(is.type?' · '+htmlEscape(is.type):'')+(is.y?' · '+is.m+'/'+is.d+' 등록':'')+'</div>'
+          +'<div class="txt">'+htmlEscape(is.content)+'</div>'+dueTxt
+          +'</div></div>';
+      }).join("")
+      +'</div>';
+  }).join("");
+}
+
 document.addEventListener("click",function(e){
   var item=e.target.closest(".ss-item");
   if(item){ showVisitDetail(item.getAttribute("data-visit")); }
@@ -883,6 +1041,19 @@ document.addEventListener("click",function(e){
     var page=tabBtn.getAttribute("data-page");
     document.getElementById("page-dashboard").style.display=(page==="dashboard")?"":"none";
     document.getElementById("page-store-status").style.display=(page==="store-status")?"":"none";
+    document.getElementById("page-issues").style.display=(page==="issues")?"":"none";
+  }
+  var segBtn=e.target.closest(".seg-btn");
+  if(segBtn){
+    var wrap=segBtn.closest(".fb-seg");
+    var status=segBtn.getAttribute("data-set");
+    wrap.querySelectorAll(".seg-btn").forEach(function(b){
+      var on=b===segBtn;
+      b.classList.toggle("active",on);
+      b.classList.toggle("bad",on&&status==="미해결");
+      b.classList.toggle("good",on&&status==="완료");
+    });
+    setIssueStatus(wrap.getAttribute("data-store"),wrap.getAttribute("data-type"),wrap.getAttribute("data-content"),wrap.getAttribute("data-date"),status);
   }
 });
 
@@ -910,6 +1081,7 @@ function init(){
     storeList=rows.filter(function(r,i){return !(i===0&&/번호|매장/.test(r.join()));}).map(function(r){return (r[1]||r[0]||"").trim();}).filter(Boolean);
   })); }
   if(REPORTS_CSV_URL){ jobs.push(loadCSV(REPORTS_CSV_URL).then(function(rows){ reports=normalizeReports(rows); useReportStatus=true; }).catch(function(){ useReportStatus=false; })); }
+  if(ISSUES_CSV_URL){ jobs.push(loadCSV(ISSUES_CSV_URL).then(function(rows){ issues=normalizeIssues(rows); }).catch(function(){ issues=[]; })); }
   Promise.all(jobs).then(function(){
     if(!schedule.length){ usingSample=true; schedule=normalize(SAMPLE_SCHEDULE.map(function(r){return r;})); }
     if(!storeList.length){ storeList=SAMPLE_STORES.slice(); }
