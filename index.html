@@ -191,8 +191,11 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .fb-issue-card{grid-column:1/-1;}
 .fb-issue-item{border-top:1px dashed var(--line);padding:10px 0;}
 .fb-issue-item:first-of-type{border-top:none;padding-top:2px;}
+.fb-issue-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .fb-issue-label{font-size:13.5px;font-weight:700;color:var(--ink);}
-.fb-issue-detail{font-size:12px;color:var(--ink-3);margin-top:2px;line-height:1.5;}
+.fb-issue-detail{font-size:12px;color:var(--ink-3);margin-top:3px;line-height:1.5;}
+.fb-issue-item .fb-seg{flex-shrink:0;}
+.fb-issue-item .seg-btn{padding:4px 9px;font-size:10.5px;}
 .ss-score-panel{display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 16px 18px;border:1px solid var(--line);border-radius:14px;margin:14px 0 16px;}
 .ss-score-chips{display:flex;gap:10px;margin-top:16px;justify-content:center;flex-wrap:wrap;width:100%;}
 .ss-score-chip{background:var(--bg);border-radius:10px;padding:9px 16px;min-width:88px;}
@@ -492,6 +495,21 @@ function matchReports(){
     });
     schedule.sort(function(a,b){return (a.y-b.y)||(a.m-b.m)||(a.d-b.d);});
   }
+}
+/* 보고서 안의 매장요청사항/운영이슈 문장을 미리 훑어서, 클릭하지 않아도
+   이슈 트래커 탭에 "미해결" 상태로 바로 보이도록 등록해둡니다. */
+function syncIssuesFromReports(){
+  schedule.forEach(function(ev){
+    if(!ev._report || storeList.indexOf(ev.t)<0) return;
+    var pf=parseFeedback(ev._report.summary);
+    pf.sections.forEach(function(s){
+      if(s.label!=="매장 요청사항"&&s.label!=="운영이슈 및 개선사항") return;
+      extractIssueItems(s.raw).forEach(function(it){
+        var exists=issues.some(function(is){ return issueMatch(is,ev.t,s.label,it.label); });
+        if(!exists){ issues.push({y:ev.y,m:ev.m,d:ev.d,store:ev.t,type:s.label,content:it.label,status:"미해결",due:null}); }
+      });
+    });
+  });
 }
 /* 2026-07-01부터 "보고서 제출 기준 완료"를 적용합니다.
    그 이전(5~6월) 일정은 보고서 제도가 없었으므로 날짜 경과 기준으로 자동 완료 처리합니다. */
@@ -968,12 +986,12 @@ function showVisitDetail(key){
             var items=extractIssueItems(s.raw);
             var itemsHtml=items.map(function(it){
               var curStatus=findIssueStatus(e.t,s.label,it.label);
-              return '<div class="fb-issue-item"><div class="fb-issue-label">'+htmlEscape(it.label)+'</div>'
-                +'<div class="fb-issue-detail">'+htmlEscape(it.detail)+'</div>'
-                +'<div class="fb-status"><div class="fb-seg" data-store="'+attrEscape(e.t)+'" data-type="'+attrEscape(s.label)+'" data-content="'+attrEscape(it.label)+'" data-date="'+dateStr+'">'
+              return '<div class="fb-issue-item"><div class="fb-issue-top"><div class="fb-issue-label">'+htmlEscape(it.label)+'</div>'
+                +'<div class="fb-seg" data-store="'+attrEscape(e.t)+'" data-type="'+attrEscape(s.label)+'" data-content="'+attrEscape(it.label)+'" data-date="'+dateStr+'">'
                 +'<button class="seg-btn'+(curStatus==="미해결"?" active bad":"")+'" data-set="미해결">미해결</button>'
                 +'<button class="seg-btn'+(curStatus==="완료"?" active good":"")+'" data-set="완료">해결</button>'
-                +'</div></div></div>';
+                +'</div></div>'
+                +'<div class="fb-issue-detail">'+htmlEscape(it.detail)+'</div></div>';
             }).join("");
             return '<div class="fb-card fb-issue-card"><div class="fb-card-hd"><i class="ti '+icon+'"></i>'+htmlEscape(s.label)+'</div>'+itemsHtml+'</div>';
           }
@@ -1115,6 +1133,7 @@ function init(){
     if(!storeList.length){ storeList=SAMPLE_STORES.slice(); }
     schedule.sort(function(a,b){return (a.y-b.y)||(a.m-b.m)||(a.d-b.d);});
     matchReports();
+    syncIssuesFromReports();
     var note=document.getElementById("stores-note");
     if(note){ note.textContent=useReportStatus?"완료는 라운딩 보고서 제출 기준 · 지난 일정인데 보고서가 없으면 미완료로 표시됩니다":"일정 시트에 등록된 전체 기간 기준 · 완료/예정은 오늘 날짜로 자동 계산 (보고서 시트를 연결하면 실제 제출 여부로 판정됩니다)"; }
     if(usingSample&&!SCHEDULE_CSV_URL){
@@ -1128,6 +1147,7 @@ function init(){
     usingSample=true; schedule=normalize(SAMPLE_SCHEDULE); storeList=SAMPLE_STORES.slice();
     schedule.sort(function(a,b){return (a.y-b.y)||(a.m-b.m)||(a.d-b.d);});
     matchReports();
+    syncIssuesFromReports();
     document.getElementById("notice").innerHTML='<div class="notice"><i class="ti ti-alert-circle" style="vertical-align:-2px;"></i> 스프레드시트를 불러오지 못해 샘플 데이터를 표시합니다. 게시 주소와 "웹에 게시" 설정을 확인하세요.</div>';
     setSync(false,"연동 실패 · 샘플 표시");
     render();
