@@ -170,7 +170,9 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .issue-grp-hd{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;padding-bottom:8px;border-bottom:2px solid var(--line);margin-bottom:8px;}
 .issue-grp-hd .dot{width:9px;height:9px;border-radius:50%;}
 .issue-grp-hd .cnt{margin-left:auto;font-size:12px;font-weight:600;color:var(--ink-3);}
-.issue-row{display:flex;align-items:flex-start;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);}
+.issue-row{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);}
+.issue-row .body{flex:1;min-width:0;}
+.issue-row .issue-seg{flex-shrink:0;}
 .issue-row:last-child{border-bottom:none;}
 .issue-row .icon{font-size:16px;color:var(--accent);margin-top:2px;}
 .issue-row .body{flex:1;}
@@ -187,6 +189,7 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .seg-btn{font-family:inherit;background:var(--card);border:none;font-size:11.5px;font-weight:700;color:var(--ink-3);padding:6px 12px;cursor:pointer;}
 .seg-btn+.seg-btn{border-left:1px solid var(--line);}
 .seg-btn.active.bad{background:var(--red-soft);color:var(--red-deep);}
+.seg-btn.active.mid{background:var(--amber-soft);color:var(--amber-deep);}
 .seg-btn.active.good{background:var(--green-soft);color:var(--green-deep);}
 .fb-status-saved{font-size:10.5px;color:var(--ink-3);}
 .fb-issue-card{grid-column:1/-1;}
@@ -215,31 +218,16 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .fb-card-title{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:3px;}
 .fb-card-body{font-size:12.5px;line-height:1.65;color:var(--ink-2);}
 .fb-full .fb-card-body,.fb-summary-inline .fb-card-body{color:#3C3489;}
-.fb-pct{display:flex;align-items:center;gap:8px;margin-top:9px;}
-.fb-pct .track{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;}
-.fb-pct .track>span{display:block;height:100%;background:var(--accent);border-radius:3px;}
-.fb-pct .val{font-size:11.5px;font-weight:700;color:var(--ink);min-width:34px;text-align:right;}
+.fb-bullets{list-style:none;margin:0;padding:0;font-size:12.5px;line-height:1.6;color:var(--ink-2);}
+.fb-bullets li{position:relative;padding-left:12px;margin-bottom:6px;}
+.fb-bullets li:last-child{margin-bottom:0;}
+.fb-bullets li:before{content:"–";position:absolute;left:0;color:var(--ink-3);}
+.fb-bullets li b{color:var(--ink);font-weight:700;}
 .fb-demo{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);}
-.fb-demo-title{font-size:10.5px;font-weight:700;color:var(--ink-3);margin-bottom:5px;}
-.fb-demo-row{margin-bottom:8px;}
-.fb-demo-row:last-child{margin-bottom:0;}
-.fb-demo-bar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--bg);}
-.fb-demo-bar span{display:block;height:100%;}
-.fb-demo-legend{display:flex;justify-content:space-between;margin-top:4px;font-size:10.5px;color:var(--ink-2);}
-.fb-demo-legend span{display:inline-flex;align-items:center;gap:4px;}
-.fb-demo-legend i{width:7px;height:7px;border-radius:50%;display:inline-block;}
-.fb-age-bars{display:flex;flex-direction:column;gap:5px;}
-.fb-age-row{display:flex;align-items:center;gap:8px;}
-.fb-age-row .lbl{font-size:10.5px;color:var(--ink-2);min-width:28px;}
-.fb-age-row .track{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;}
-.fb-age-row .track>span{display:block;height:100%;background:#378ADD;border-radius:3px;}
-.fb-age-row .val{font-size:10.5px;font-weight:700;color:var(--ink);min-width:28px;text-align:right;}
-.fb-age-qual{display:flex;gap:7px;flex-wrap:wrap;}
-.fb-age-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:700;}
-.fb-age-chip.lv-high{background:#534AB7;color:#fff;}
-.fb-age-chip.lv-mid{background:var(--accent-soft);color:var(--accent-deep);}
-.fb-age-chip.lv-low{background:var(--bg);color:var(--ink-3);border:1px solid var(--line);}
-.fb-age-chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.fb-main-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;}
+.fb-main-lbl{font-size:11.5px;color:var(--ink-3);font-weight:600;}
+.fb-main-val{font-size:13px;font-weight:700;color:var(--ink);}
+.fb-main-val.empty{color:var(--ink-3);font-weight:500;}
 .fb-toggle{background:transparent;border:1px solid var(--line);border-radius:8px;font-size:12px;font-weight:600;color:var(--ink-2);padding:6px 12px;cursor:pointer;margin-top:4px;}
 footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
 </style>
@@ -902,42 +890,39 @@ function pctNear(text,keyword){
   var v=m[2]?Math.round((parseInt(m[1],10)+parseInt(m[2],10))/2):parseInt(m[1],10);
   return (v>=0&&v<=100)?v:null;
 }
-function extractDemographics(text){
+function extractMainCustomerType(text){
   var foreign=pctNear(text,"외국인");
   var domestic=pctNear(text,"내국인|국내");
-  if(foreign!==null&&domestic===null) domestic=100-foreign;
-  if(domestic!==null&&foreign===null) foreign=100-domestic;
-
-  var ageRe=/(\d{1,2})\s*대[^%,.;]{0,15}?(\d{1,3})(?:\s*~\s*(\d{1,3}))?\s*%/g;
-  var ageGroups=[],am;
+  if(foreign!==null||domestic!==null){
+    if(foreign!==null&&domestic!==null) return foreign>=domestic?"외국인":"내국인";
+    return foreign!==null?"외국인":"내국인";
+  }
+  if(/외국인[^,.;]{0,15}?(중심|위주|우세|많은\s*편|다수)/.test(text)) return "외국인";
+  if(/내국인[^,.;]{0,15}?(중심|위주|우세|많은\s*편|다수)/.test(text)) return "내국인";
+  if(/(중심|위주|우세|많은\s*편|다수)[^,.;]{0,15}?외국인/.test(text)) return "외국인";
+  if(/(중심|위주|우세|많은\s*편|다수)[^,.;]{0,15}?내국인/.test(text)) return "내국인";
+  return null;
+}
+function extractMainAge(text){
+  var ageRe=/(\d{1,2})\s*대[^%,.;]{0,15}?(\d{1,3})(?:\s*~\s*(\d{1,3}))?\s*%/g, best=null, am;
   while((am=ageRe.exec(text))){
     var v=am[3]?Math.round((parseInt(am[2],10)+parseInt(am[3],10))/2):parseInt(am[2],10);
-    if(v>=0&&v<=100) ageGroups.push({label:am[1]+"대",pct:v});
+    if(!best||v>best.v) best={label:am[1]+"대",v:v};
   }
-  var ageQual=[];
-  if(!ageGroups.length){
-    var qualRe=/(\d{1,2})\s*대[^,.;%]{0,15}?(많은\s*편|많음|위주|중심|우세|높은\s*편|비중이\s*높|주로|대부분|다수|보통|평균적|적은\s*편|적음|낮은\s*편|비중이\s*낮|소수)/g;
-    var LOW=/적은\s*편|적음|낮은\s*편|비중이\s*낮|소수/, MED=/보통|평균적/, qm;
-    while((qm=qualRe.exec(text))){
-      var level=LOW.test(qm[2])?"적음":(MED.test(qm[2])?"보통":"많음");
-      ageQual.push({label:qm[1]+"대",level:level});
-    }
-  }
-
-  var female=pctNear(text,"여성");
-  var male=pctNear(text,"남성");
-  if(female!==null&&male===null) male=100-female;
-  if(male!==null&&female===null) female=100-male;
-
-  return {
-    foreign:foreign, domestic:domestic,
-    ageGroups:ageGroups, ageQual:ageQual,
-    female:female, male:male
-  };
+  if(best) return best.label;
+  var qm=text.match(/(\d{1,2})\s*대[^,.;%]{0,15}?(많은\s*편|많음|위주|중심|우세|주로|대부분|다수)/);
+  return qm?qm[1]+"대":null;
 }
-function demoBarHTML(leftLabel,leftPct,leftColor,rightLabel,rightPct,rightColor){
-  return '<div class="fb-demo-row"><div class="fb-demo-bar"><span style="width:'+leftPct+'%;background:'+leftColor+';"></span><span style="width:'+rightPct+'%;background:'+rightColor+';"></span></div>'
-    +'<div class="fb-demo-legend"><span><i style="background:'+leftColor+';"></i>'+leftLabel+' '+leftPct+'%</span><span><i style="background:'+rightColor+';"></i>'+rightLabel+' '+rightPct+'%</span></div></div>';
+function renderBullets(text){
+  var items=(text||"").split(".").map(function(s){return s.trim();}).filter(function(s){return s.length>3;});
+  if(!items.length) return '<div class="fb-card-body">'+htmlEscape(text||"")+'</div>';
+  return '<ul class="fb-bullets">'+items.map(function(s){
+    var colonIdx=s.search(/[:：]/);
+    if(colonIdx>0&&colonIdx<20){
+      return '<li><b>'+htmlEscape(s.slice(0,colonIdx).trim())+'</b>: '+htmlEscape(s.slice(colonIdx+1).trim())+'.</li>';
+    }
+    return '<li>'+htmlEscape(s)+'.</li>';
+  }).join("")+'</ul>';
 }
 /* 규칙 기반 자동 요약: 항목별 가중치 + 핵심 키워드 포함 여부로 문장 점수를 매겨 상위 1~2문장을 뽑습니다 */
 function autoSummarize(sections){
@@ -1055,11 +1040,11 @@ function showVisitDetail(key){
           var itemsHtml=items.map(function(it){
             registerIssue(e.t,s.label,it.label,e);
             var curStatus=findIssueStatus(e.t,s.label,it.label);
+            var badgeCls=curStatus==="완료"?"tag done":(curStatus==="진행중"?"tag miss":"tag none");
+            var badgeTxt=curStatus==="완료"?"해결":curStatus;
             return '<div class="fb-issue-item"><div class="fb-issue-top"><div class="fb-issue-label">'+htmlEscape(it.label)+'</div>'
-              +'<div class="fb-seg" data-store="'+attrEscape(e.t)+'" data-type="'+attrEscape(s.label)+'" data-content="'+attrEscape(it.label)+'" data-date="'+dateStr+'">'
-              +'<button class="seg-btn'+(curStatus==="미해결"?" active bad":"")+'" data-set="미해결">미해결</button>'
-              +'<button class="seg-btn'+(curStatus==="완료"?" active good":"")+'" data-set="완료">해결</button>'
-              +'</div></div>'
+              +'<span class="'+badgeCls+'" style="cursor:default;">'+badgeTxt+'</span>'
+              +'</div>'
               +'<div class="fb-issue-detail">'+htmlEscape(it.detail)+'</div></div>';
           }).join("");
           actionHtml.push('<div class="fb-card fb-issue-card"><div class="fb-card-hd"><i class="ti '+icon+'"></i>'+htmlEscape(s.label)+'</div>'+itemsHtml+'</div>');
@@ -1067,21 +1052,16 @@ function showVisitDetail(key){
         }
         var demoHtml="";
         if(s.label==="고객동향"){
-          var demo=extractDemographics(s.raw);
-          var rows=[];
-          if(demo.foreign!==null&&demo.domestic!==null) rows.push('<div class="fb-demo-title">내/외국인 비중</div>'+demoBarHTML("내국인",demo.domestic,"#378ADD","외국인",demo.foreign,"#534AB7"));
-          if(demo.ageGroups.length) rows.push('<div class="fb-demo-title" style="margin-top:10px;">연령대 비중</div><div class="fb-age-bars">'+demo.ageGroups.map(function(a){return '<div class="fb-age-row"><span class="lbl">'+a.label+'</span><div class="track"><span style="width:'+a.pct+'%;"></span></div><span class="val">'+a.pct+'%</span></div>';}).join("")+'</div>');
-          else if(demo.ageQual.length) rows.push('<div class="fb-demo-title" style="margin-top:10px;">연령대 비중 (정성 평가)</div><div class="fb-age-qual">'+demo.ageQual.map(function(a){
-            var cls=a.level==="많음"?"lv-high":(a.level==="보통"?"lv-mid":"lv-low");
-            return '<span class="fb-age-chip '+cls+'"><span class="dot"></span>'+a.label+' '+a.level+'</span>';
-          }).join("")+'</div>');
-          if(demo.female!==null&&demo.male!==null) rows.push('<div class="fb-demo-title" style="margin-top:10px;">성별 비중</div>'+demoBarHTML("여성",demo.female,"#D4537E","남성",demo.male,"#378ADD"));
-          if(rows.length) demoHtml='<div class="fb-demo">'+rows.join("")+'</div>';
+          var mainCustomer=extractMainCustomerType(s.raw);
+          var mainAge=extractMainAge(s.raw);
+          demoHtml='<div class="fb-demo">'
+            +'<div class="fb-main-row"><span class="fb-main-lbl">주 고객층</span><span class="fb-main-val'+(mainCustomer?'':' empty')+'">'+(mainCustomer||"-")+'</span></div>'
+            +'<div class="fb-main-row"><span class="fb-main-lbl">주 연령</span><span class="fb-main-val'+(mainAge?'':' empty')+'">'+(mainAge||"-")+'</span></div>'
+            +'</div>';
         }
         normalHtml.push('<div class="fb-card"><div class="fb-card-hd"><i class="ti '+icon+'"></i>'+htmlEscape(s.label)+'</div>'
           +(s.title?'<div class="fb-card-title">'+htmlEscape(s.title)+'</div>':'')
-          +'<div class="fb-card-body">'+htmlEscape(s.body)+'</div>'
-          +(s.pct!==null?'<div class="fb-pct"><div class="track"><span style="width:'+s.pct+'%;"></span></div><span class="val">'+s.pct+'%</span></div>':'')
+          +renderBullets(s.body)
           +demoHtml
           +'</div>');
         if(s.label==="VM 분석 및 인사이트"&&summaryCardHtml){ normalHtml.push(summaryCardHtml); summaryInserted=true; }
@@ -1163,10 +1143,16 @@ function renderIssuesPage(){
           var overdue=toDate(is.due)<today && st!=="완료";
           dueTxt='<div class="due'+(overdue?' overdue':'')+'">조치예정 '+is.due.m+'/'+is.due.d+(overdue?' · 기한 경과':'')+'</div>';
         }
+        var dateStr=is.y?(is.y+"-"+is.m+"-"+is.d):"";
+        var seg='<div class="fb-seg issue-seg" data-store="'+attrEscape(is.store||"")+'" data-type="'+attrEscape(is.type||"")+'" data-content="'+attrEscape(is.content||"")+'" data-date="'+dateStr+'">'
+          +'<button class="seg-btn'+(is.status==="미해결"?" active bad":"")+'" data-set="미해결">미해결</button>'
+          +'<button class="seg-btn'+(is.status==="진행중"?" active mid":"")+'" data-set="진행중">진행중</button>'
+          +'<button class="seg-btn'+(is.status==="완료"?" active good":"")+'" data-set="완료">완료</button>'
+          +'</div>';
         return '<div class="issue-row"><i class="ti '+icon+' icon"></i><div class="body">'
           +'<div class="meta">'+(is.store?'<b style="color:var(--ink);">'+htmlEscape(is.store)+'</b>':'')+(is.type?' · '+htmlEscape(is.type):'')+(is.y?' · '+is.m+'/'+is.d+' 등록':'')+'</div>'
           +'<div class="txt">'+htmlEscape(is.content)+'</div>'+dueTxt
-          +'</div></div>';
+          +'</div>'+seg+'</div>';
       }).join("")
       +'</div>';
   }).join("");
@@ -1191,6 +1177,7 @@ document.addEventListener("click",function(e){
       var on=b===segBtn;
       b.classList.toggle("active",on);
       b.classList.toggle("bad",on&&status==="미해결");
+      b.classList.toggle("mid",on&&status==="진행중");
       b.classList.toggle("good",on&&status==="완료");
     });
     setIssueStatus(wrap.getAttribute("data-store"),wrap.getAttribute("data-type"),wrap.getAttribute("data-content"),wrap.getAttribute("data-date"),status);
