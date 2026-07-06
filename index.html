@@ -193,6 +193,7 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .issue-row .meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-3);margin-bottom:3px;}
 .issue-row .txt{font-size:13px;color:var(--ink);line-height:1.55;}
 .issue-row .due{font-size:11.5px;color:var(--amber-deep);margin-top:3px;}
+.issue-row .issue-note{font-size:11.5px;color:var(--ink-3);margin-top:3px;font-style:italic;}
 .issue-row .due.overdue{color:var(--red-deep);font-weight:700;}
 .fb-copy-btn{background:transparent;border:1px solid var(--line);border-radius:7px;font-size:11px;font-weight:600;color:var(--ink-2);padding:5px 10px;cursor:pointer;margin-top:8px;display:inline-flex;align-items:center;gap:4px;}
 .fb-copy-btn i{font-size:13px;}
@@ -513,6 +514,8 @@ function normalizeIssues(rows){
   var contentCol=findCol(["내용"]);
   var statusCol=findCol(["상태"]);
   var dueCol=findCol(["조치예정일","조치예정","예정일"]);
+  var resolvedCol=findCol(["해결일자","해결일"]);
+  var noteCol=findCol(["부연설명","비고","메모","note"]);
   var out=[];
   for(var r=1;r<rows.length;r++){
     var row=rows[r];
@@ -520,13 +523,16 @@ function normalizeIssues(rows){
     var content=contentCol>=0?(row[contentCol]||"").trim():"";
     if(!content) continue;
     var due=dueCol>=0?parseDate(row[dueCol]):null;
+    var resolved=resolvedCol>=0?parseDate(row[resolvedCol]):null;
     out.push({
       y:dt?dt.y:null, m:dt?dt.m:null, d:dt?dt.d:null,
       store:storeCol>=0?(row[storeCol]||"").trim():"",
       type:typeCol>=0?(row[typeCol]||"").trim():"",
       content:content,
       status:(statusCol>=0?(row[statusCol]||"").trim():"")||"미해결",
-      due:due
+      due:due,
+      resolved:resolved,
+      note:noteCol>=0?(row[noteCol]||"").trim():""
     });
   }
   return out;
@@ -1346,10 +1352,13 @@ function renderIssuesPage(){
       +list.map(function(is){
         var icon=ISSUE_TYPE_ICON[is.type]||"ti-file-text";
         var dueTxt="";
-        if(is.due){
+        if(is.status==="완료"&&is.resolved){
+          dueTxt='<div class="due" style="color:var(--green-deep);">해결일 '+is.resolved.m+'/'+is.resolved.d+'</div>';
+        }else if(is.due){
           var overdue=toDate(is.due)<today && st!=="완료";
           dueTxt='<div class="due'+(overdue?' overdue':'')+'">조치예정 '+is.due.m+'/'+is.due.d+(overdue?' · 기한 경과':'')+'</div>';
         }
+        var noteTxt=is.note?'<div class="issue-note">'+htmlEscape(is.note)+'</div>':"";
         var dateStr=is.y?(is.y+"-"+is.m+"-"+is.d):"";
         var seg='<div class="fb-seg issue-seg" data-store="'+attrEscape(is.store||"")+'" data-type="'+attrEscape(is.type||"")+'" data-content="'+attrEscape(is.content||"")+'" data-date="'+dateStr+'">'
           +'<button class="seg-btn'+(is.status==="미해결"?" active bad":"")+'" data-set="미해결">미해결</button>'
@@ -1358,7 +1367,7 @@ function renderIssuesPage(){
           +'</div>';
         return '<div class="issue-row" data-issue-key="'+attrEscape(issueRowKey(is.store,is.type,is.content))+'"><i class="ti '+icon+' icon"></i><div class="body">'
           +'<div class="meta">'+(is.store?'<b style="color:var(--ink);">'+htmlEscape(is.store)+'</b>':'')+(is.type?' · '+htmlEscape(is.type):'')+(is.y?' · '+is.m+'/'+is.d+' 등록':'')+'</div>'
-          +'<div class="txt">'+htmlEscape(is.content)+'</div>'+dueTxt
+          +'<div class="txt">'+htmlEscape(is.content)+'</div>'+dueTxt+noteTxt
           +'</div>'+seg+'</div>';
       }).join("")
       +'</div>';
