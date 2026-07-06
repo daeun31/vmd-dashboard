@@ -996,10 +996,10 @@ function attrEscape(s){ return htmlEscape(s).replace(/"/g,"&quot;"); }
 /* 매장 라운딩 보고서 마지막 페이지의 고정 5개 항목명 (정확히 이 표현 기준으로 인식) */
 var HEADER_ALIASES={
   "고객동향":["고객동향","고객 동향"],
-  "상품 VOC 및 판매 동향":["상품 VOC 및 판매 동향","상품VOC 및 판매 동향","상품 VOC 및 판매동향","상품 voc 및 판매 동향"],
+  "상품 VOC 및 판매 동향":["상품 VOC 및 판매 동향","상품VOC 및 판매 동향","상품 VOC 및 판매동향","상품 voc 및 판매 동향","상품"],
   "VM 분석 및 인사이트":["VM 분석 및 인사이트","VM분석 및 인사이트","vm 분석 및 인사이트"],
-  "매장 요청사항":["매장 요청사항","매장요청사항","매장 요청 사항"],
-  "운영이슈 및 개선사항":["운영이슈 및 개선사항","운영 이슈 및 개선사항","운영이슈및개선사항"]
+  "매장 요청사항":["매장 요청사항","매장요청사항","매장 요청 사항","요청사항","인테리어 이슈","인테리어이슈"],
+  "운영이슈 및 개선사항":["운영이슈 및 개선사항","운영 이슈 및 개선사항","운영이슈및개선사항","운영이슈"]
 };
 var CATEGORY_ICON={
   "고객동향":"ti-users",
@@ -1008,19 +1008,35 @@ var CATEGORY_ICON={
   "매장 요청사항":"ti-clipboard-list",
   "운영이슈 및 개선사항":"ti-alert-triangle"
 };
+function findAllOcc(hay,needle){
+  var res=[],idx=0;
+  while(true){ var f=hay.indexOf(needle,idx); if(f<0) break; res.push(f); idx=f+needle.length; }
+  return res;
+}
+/* 항목명이 문서 안에 여러 번(비연속으로) 등장해도 전부 찾아서 나중에 같은 항목끼리 합칩니다.
+   "상품","요청사항"처럼 짧아서 다른 문장 속에 우연히 섞일 수 있는 표현은,
+   줄 맨 앞(진짜 항목 제목)에 있을 때만 인정합니다. */
 function findFeedbackMarkers(body){
   var lower=body.toLowerCase();
   var markers=[];
   Object.keys(HEADER_ALIASES).forEach(function(canon){
-    var bestIdx=-1,bestLen=0;
     HEADER_ALIASES[canon].forEach(function(a){
-      var idx=lower.indexOf(a.toLowerCase());
-      if(idx>=0 && (bestIdx<0||idx<bestIdx)){ bestIdx=idx; bestLen=a.length; }
+      var la=a.toLowerCase();
+      var occ=findAllOcc(lower,la);
+      if(!occ.length) return;
+      var lineStart=occ.filter(function(idx){ return idx===0||body[idx-1]==="\n"; });
+      var use=lineStart.length?lineStart:(a.length>=4?occ.slice(0,1):[]);
+      use.forEach(function(idx){ markers.push({index:idx,len:a.length,label:canon}); });
     });
-    if(bestIdx>=0) markers.push({index:bestIdx,len:bestLen,label:canon});
   });
   markers.sort(function(a,b){return a.index-b.index;});
-  return markers;
+  var cleaned=[];
+  markers.forEach(function(m){
+    var last=cleaned[cleaned.length-1];
+    if(last && m.index<last.index+last.len) return;
+    cleaned.push(m);
+  });
+  return cleaned;
 }
 function extractPct(text){
   var m=text.match(/(\d{1,3})(?:\s*~\s*\d{1,3})?\s*%/);
@@ -1094,9 +1110,6 @@ function dedupeSentences(list){
   });
   return kept;
 }
-function cleanStrayLabels(text){
-  return (text||"").replace(/(?:^|[\s(])(요청사항|운영이슈)(?=[\s):.]|$)/g," ").replace(/\s{2,}/g," ").trim();
-}
 function autoSummarize(sections){
   var focus=["고객동향","상품 VOC 및 판매 동향","VM 분석 및 인사이트"];
   var WEIGHT={"VM 분석 및 인사이트":3,"상품 VOC 및 판매 동향":2,"고객동향":1};
@@ -1125,17 +1138,22 @@ function parseFeedback(raw){
   var body=text, manualSummary="";
   if(smMatch){ body=text.slice(0,smMatch.index).trim(); manualSummary=text.slice(smMatch.index+smMatch[0].length).trim(); }
   var markers=findFeedbackMarkers(body);
-  var sections=[];
+  var order=[], grouped={};
   for(var i=0;i<markers.length;i++){
     var start=markers[i].index, end=(i+1<markers.length)?markers[i+1].index:body.length;
     var chunk=body.slice(start+markers[i].len,end).trim();
-    chunk=cleanStrayLabels(chunk);
     if(!chunk) continue;
+    var lbl=markers[i].label;
+    if(!grouped[lbl]){ grouped[lbl]=[]; order.push(lbl); }
+    grouped[lbl].push(chunk);
+  }
+  var sections=order.map(function(lbl){
+    var chunk=grouped[lbl].join(" ");
     var title="",bodyTxt=chunk;
     var colonIdx=chunk.search(/[:：]/);
     if(colonIdx>0 && colonIdx<32){ title=chunk.slice(0,colonIdx).trim(); bodyTxt=chunk.slice(colonIdx+1).trim(); }
-    sections.push({label:markers[i].label,title:title,body:bodyTxt,raw:chunk,pct:extractPct(chunk)});
-  }
+    return {label:lbl,title:title,body:bodyTxt,raw:chunk,pct:extractPct(chunk)};
+  });
   /* 고정 항목명(매장요청사항/운영이슈)이 텍스트에 없어서 못 나눈 경우,
      전체 피드백에서라도 조치 필요 문장을 찾아 이슈로 등록될 수 있게 폴백 처리합니다. */
   var hasActionable=sections.some(function(s){ return s.label==="매장 요청사항"||s.label==="운영이슈 및 개선사항"; });
