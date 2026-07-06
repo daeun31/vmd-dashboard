@@ -1067,7 +1067,7 @@ function extractMainCustomer(text){
 }
 function renderBullets(text){
   var norm=(text||"").replace(/\r/g,"").replace(/\n\s*[-•●]\s*/g,"\n").split(/\n+/).join(". ");
-  var items=norm.split(".").map(function(s){return s.trim();}).filter(function(s){return s.length>3;});
+  var items=dedupeSentences(norm.split(".").map(function(s){return s.trim();}).filter(function(s){return s.length>3;}));
   if(!items.length) return '<div class="fb-card-body">'+htmlEscape(text||"")+'</div>';
   return '<ul class="fb-bullets">'+items.map(function(s){
     var colonIdx=s.search(/[:：]/);
@@ -1078,11 +1078,32 @@ function renderBullets(text){
   }).join("")+'</ul>';
 }
 /* 규칙 기반 자동 요약: 항목별 가중치 + 핵심 키워드 포함 여부로 문장 점수를 매겨 상위 1~2문장을 뽑습니다 */
+function normDedup(s){ return s.replace(/[\s.,!?():"'★☆\-]/g,"").toLowerCase(); }
+function dedupeSentences(list){
+  var kept=[];
+  list.forEach(function(s){
+    var ns=normDedup(s);
+    if(!ns) return;
+    var dupIdx=-1;
+    for(var i=0;i<kept.length;i++){
+      var nk=normDedup(kept[i]);
+      if(ns===nk||nk.indexOf(ns)>=0||ns.indexOf(nk)>=0){ dupIdx=i; break; }
+    }
+    if(dupIdx<0) kept.push(s);
+    else if(s.length>kept[dupIdx].length) kept[dupIdx]=s;
+  });
+  return kept;
+}
+function cleanStrayLabels(text){
+  return (text||"").replace(/(?:^|[\s(])(요청사항|운영이슈)(?=[\s):.]|$)/g," ").replace(/\s{2,}/g," ").trim();
+}
 function autoSummarize(sections){
-  var WEIGHT={"매장 요청사항":3,"운영이슈 및 개선사항":3,"VM 분석 및 인사이트":2,"상품 VOC 및 판매 동향":2,"고객동향":1};
-  var KEY=/시급|필요|요청|희망|강화|개선|부족|고장|훼손|반영|보수|지원|권장/;
+  var focus=["고객동향","상품 VOC 및 판매 동향","VM 분석 및 인사이트"];
+  var WEIGHT={"VM 분석 및 인사이트":3,"상품 VOC 및 판매 동향":2,"고객동향":1};
+  var KEY=/시급|필요|희망|강화|개선|제안|권장|추천/;
   var candidates=[];
   sections.forEach(function(s){
+    if(focus.indexOf(s.label)<0) return;
     var text=((s.title?s.title+" ":"")+s.body).trim();
     splitSentences(text).forEach(function(sent){
       if(sent.length<8) return;
@@ -1108,6 +1129,7 @@ function parseFeedback(raw){
   for(var i=0;i<markers.length;i++){
     var start=markers[i].index, end=(i+1<markers.length)?markers[i+1].index:body.length;
     var chunk=body.slice(start+markers[i].len,end).trim();
+    chunk=cleanStrayLabels(chunk);
     if(!chunk) continue;
     var title="",bodyTxt=chunk;
     var colonIdx=chunk.search(/[:：]/);
@@ -1147,7 +1169,7 @@ function splitSentences(text){
 }
 function extractIssueItems(chunk){
   var sentences=splitSentences(chunk);
-  var matched=sentences.filter(function(s){return ISSUE_KEY.test(s);});
+  var matched=dedupeSentences(sentences.filter(function(s){return ISSUE_KEY.test(s);}));
   var items=matched.length?matched:(sentences.length?[sentences[0]]:[]);
   return items.map(function(s){ return {detail:s+".", label:shortLabel(s)}; });
 }
