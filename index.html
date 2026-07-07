@@ -160,6 +160,12 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .ss-report .rlink{font-size:12.5px;font-weight:600;color:var(--text-accent,var(--accent));text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
 .ss-summary{background:var(--bg);border-radius:8px;padding:12px 14px;margin-top:8px;}
 .interior-photo-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:28px 10px;color:var(--ink-3);font-size:12.5px;}
+.interior-cover{width:100%;border-radius:12px;cursor:pointer;position:relative;overflow:hidden;max-height:280px;}
+.interior-cover img{width:100%;height:100%;object-fit:cover;display:block;}
+.interior-cover .cnt-badge{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.65);color:#fff;font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:20px;}
+.interior-lightbox{position:fixed;inset:0;background:rgba(20,18,15,.9);z-index:1000;display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding:50px 16px;}
+.interior-lightbox img{max-width:min(880px,92vw);width:100%;border-radius:10px;margin-bottom:18px;}
+.interior-lightbox-close{position:fixed;top:16px;right:22px;color:#fff;font-size:32px;line-height:1;cursor:pointer;z-index:1001;}
 .interior-photo-empty i{font-size:26px;}
 .ss-summary .lbl{font-size:11.5px;font-weight:700;color:var(--accent-deep);display:flex;align-items:center;gap:5px;margin-bottom:5px;}
 .ss-summary p{font-size:13px;line-height:1.7;color:var(--ink-2);}
@@ -1425,8 +1431,8 @@ function renderIssuesPage(){
 /* 매장 인테리어 정보 (레이아웃 초안). 실제 데이터는 나중에 별도 시트를 연결해서 채울 예정이며,
    지금은 구조 확인용 샘플 데이터 몇 개만 넣어뒀습니다. */
 var SAMPLE_INTERIOR={
-  "신사점":{area:"52평",floors:"지상 1층",vendor:"OO디자인랩",photoUrl:"",estimate:"3,200만원",estimateLink:"",fixtures:"마네킹 6대 · 진열테이블 4개 · 행거 10개",lastRenovation:"2025-03",note:"입구 쪽 윈도우 2면, 시즌마다 전면 교체"},
-  "성수 플래그쉽 스토어":{area:"120평",floors:"지상 1층 · 지하 1층",vendor:"OO디자인랩",photoUrl:"",estimate:"9,800만원",estimateLink:"",fixtures:"마네킹 12대 · 진열테이블 8개 · 행거 20개",lastRenovation:"2024-11",note:"플래그십 매장, 별도 촬영 스튜디오 보유"}
+  "신사점":{address:"서울시 강남구 압구정로 ○○길 12",area:"52평",floors:"지상 1층",vendor:"OO디자인랩",photos:[],openedDate:"2019-04",floorPlanLink:"",estimateDocLink:"",note:"입구 쪽 윈도우 2면, 시즌마다 전면 교체"},
+  "성수 플래그쉽 스토어":{address:"서울시 성동구 ○○로 34",area:"120평",floors:"지상 1층 · 지하 1층",vendor:"OO디자인랩",photos:[],openedDate:"2022-09",floorPlanLink:"",estimateDocLink:"",note:"플래그십 매장, 별도 촬영 스튜디오 보유"}
 };
 var selectedInterior=null;
 function renderInteriorPage(){
@@ -1439,6 +1445,23 @@ function renderInteriorPage(){
   }).join("");
   if(selectedInterior) showInteriorDetail(selectedInterior);
 }
+function interiorCoverHTML(photos){
+  if(!photos||!photos.length) return '<div class="interior-photo-empty"><i class="ti ti-photo"></i><span>등록된 오픈 매장 이미지가 없어요</span></div>';
+  var safe=JSON.stringify(photos).replace(/'/g,"&#39;");
+  return '<div class="interior-cover" onclick="openInteriorLightbox(this)" data-photos=\''+safe+'\'>'
+    +'<img src="'+photos[0]+'" alt="오픈 매장 이미지">'
+    +(photos.length>1?'<span class="cnt-badge">전체 '+photos.length+'장 보기</span>':'')
+    +'</div>';
+}
+function openInteriorLightbox(el){
+  var photos=JSON.parse(el.getAttribute("data-photos").replace(/&#39;/g,"'"));
+  var overlay=document.createElement("div");
+  overlay.className="interior-lightbox";
+  overlay.innerHTML='<span class="interior-lightbox-close" onclick="this.parentNode.remove()">&times;</span>'
+    +photos.map(function(p){return '<img src="'+p+'" alt="오픈 매장 이미지">';}).join("");
+  overlay.addEventListener("click",function(e){ if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
 function showInteriorDetail(nm){
   selectedInterior=nm;
   document.querySelectorAll('#interior-list .ss-item').forEach(function(el){ el.classList.toggle("active", el.getAttribute("data-interior")===nm); });
@@ -1448,18 +1471,17 @@ function showInteriorDetail(nm){
   if(!info){
     html+='<div class="ss-summary empty"><div class="lbl"><i class="ti ti-home"></i>등록된 인테리어 정보 없음</div><p>이 매장은 아직 인테리어 참고 정보가 등록되지 않았어요. 시트 연결 후 자동으로 채워질 예정이에요.</p></div>';
   }else{
-    var photoBlock=info.photoUrl
-      ?'<img src="'+info.photoUrl+'" style="width:100%;border-radius:10px;display:block;">'
-      :'<div class="interior-photo-empty"><i class="ti ti-photo"></i><span>등록된 오픈 매장 이미지가 없어요</span></div>';
-    var estimateLinkBtn=info.estimateLink?'<a class="ss-report-btn" href="'+info.estimateLink+'" target="_blank" rel="noopener" style="margin-top:8px;"><i class="ti ti-file-text"></i>견적서 보기</a>':'';
-    html+='<div class="fb-card-grid">'
+    html+=interiorCoverHTML(info.photos)
+      +'<div class="fb-card-grid" style="margin-top:12px;">'
+      +'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-map-pin"></i>매장 주소</div><div class="fb-card-body">'+(info.address||"-")+'</div></div>'
       +'<div class="fb-card"><div class="fb-card-hd"><i class="ti ti-ruler-2"></i>매장 면적 · 층 구성</div><div class="fb-card-body">'+info.area+' · '+info.floors+'</div></div>'
       +'<div class="fb-card"><div class="fb-card-hd"><i class="ti ti-tools"></i>인테리어 업체명</div><div class="fb-card-body">'+(info.vendor||"-")+'</div></div>'
-      +'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-photo"></i>오픈 매장 이미지</div>'+photoBlock+'</div>'
-      +'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-receipt"></i>매장 인테리어 견적</div><div class="fb-card-body">'+(info.estimate||"-")+'</div>'+estimateLinkBtn+'</div>'
-      +'<div class="fb-card"><div class="fb-card-hd"><i class="ti ti-calendar-event"></i>최근 인테리어 공사</div><div class="fb-card-body">'+info.lastRenovation+'</div></div>'
-      +'<div class="fb-card"><div class="fb-card-hd"><i class="ti ti-armchair"></i>주요 집기 현황</div><div class="fb-card-body">'+info.fixtures+'</div></div>'
+      +'<div class="fb-card"><div class="fb-card-hd"><i class="ti ti-calendar-event"></i>오픈일</div><div class="fb-card-body">'+(info.openedDate||"-")+'</div></div>'
       +'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-note"></i>비고</div><div class="fb-card-body">'+info.note+'</div></div>'
+      +'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-shield-lock"></i>매장 인테리어 견적</div><div class="fb-card-body" style="color:var(--ink-3);">민감 정보라 대시보드에는 표시하지 않아요. 비공개 문서에서 확인하세요.</div>'
+        +(info.estimateDocLink?'<a class="ss-report-btn" href="'+info.estimateDocLink+'" target="_blank" rel="noopener" style="margin-top:8px;"><i class="ti ti-lock"></i>비공개 견적 문서 열기</a>':'<div style="font-size:11.5px;color:var(--ink-3);margin-top:6px;">등록된 비공개 문서 링크가 없어요.</div>')
+        +'</div>'
+      +(info.floorPlanLink?'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-layout-grid"></i>매장 도면</div><a class="ss-report-btn" href="'+info.floorPlanLink+'" target="_blank" rel="noopener"><i class="ti ti-file-text"></i>도면 보기</a></div>':'')
       +'</div>';
   }
   document.getElementById("interior-detail-wrap").innerHTML=html;
