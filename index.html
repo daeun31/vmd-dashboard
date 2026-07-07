@@ -16,6 +16,7 @@ var STORES_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBw
 var REPORTS_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLFIrSatd-0vtueexT2y4uZQf4O1icT8EXm5JT7DhP91DK7bPbRlRCNJrE_VlnTBStx5xfXvrsu74I/pub?gid=2118325494&single=true&output=csv";   /* 라운딩 보고서 제출현황 시트 CSV 주소 (선택, 구글폼 응답 시트를 웹에 게시해서 연결. 비워두면 이전처럼 날짜 경과만으로 완료 표시) */
 var ISSUES_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLFIrSatd-0vtueexT2y4uZQf4O1icT8EXm5JT7DhP91DK7bPbRlRCNJrE_VlnTBStx5xfXvrsu74I/pub?gid=465377158&single=true&output=csv";   /* 이슈트래커 시트 CSV 주소 (선택). 열 구성: 등록일 | 매장명 | 구분 | 내용 | 상태 | 조치예정일 */
 var ISSUE_UPDATE_URL = "https://script.google.com/macros/s/AKfycbyHimUg704plGR6IXjHqFjFC6IuEmRf_SF6zxX-i7iaEJvY9xeFwTMfffBni8LIHevs/exec";   /* 이슈 상태를 시트에 저장하는 Apps Script 웹앱 URL (선택, 비우면 화면에서만 임시로 반영됩니다) */
+var INTERIOR_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBwhOpIFBkqqZ5MNfh9hHOCjRlb7E2L2wZ5Y5biQmAZolWIzKnArYbZk-jDP4d5Z1T53AJVs7g/pub?gid=635722124&single=true&output=csv";   /* 매장인테리어 시트 CSV 주소 (선택) */
 </script>
 <style>
 :root{
@@ -572,6 +573,47 @@ function normalizeIssues(rows){
       resolved:resolved,
       note:noteCol>=0?(row[noteCol]||"").trim():""
     });
+  }
+  return out;
+}
+
+var interiorData={};
+function normalizeInterior(rows){
+  if(!rows.length) return {};
+  var header=rows[0].map(function(c){return (c||"").toLowerCase();});
+  var headerLoose=header.map(function(h){return h.replace(/\s+/g,"");});
+  function findCol(keys){
+    var keysLoose=keys.map(function(k){return k.toLowerCase().replace(/\s+/g,"");});
+    for(var i=0;i<header.length;i++){ if(keys.indexOf(header[i])>=0) return i; }
+    for(var i=0;i<headerLoose.length;i++){ for(var k=0;k<keysLoose.length;k++){ if(headerLoose[i].indexOf(keysLoose[k])>=0) return i; } }
+    return -1;
+  }
+  var storeCol=findCol(["매장명","매장"]);
+  var photoCol=findCol(["오픈매장이미지","이미지","사진"]);
+  var addrCol=findCol(["매장주소","주소"]);
+  var areaCol=findCol(["매장면적","면적"]);
+  var floorCol=findCol(["층구성","층"]);
+  var vendorCol=findCol(["인테리어업체명","업체명","업체"]);
+  var openCol=findCol(["오픈일"]);
+  var planCol=findCol(["도면링크","도면"]);
+  var noteCol=findCol(["비고"]);
+  var out={};
+  for(var r=1;r<rows.length;r++){
+    var row=rows[r];
+    var store=storeCol>=0?(row[storeCol]||"").trim():"";
+    if(!store) continue;
+    var photos=photoCol>=0?(row[photoCol]||"").split(/\r?\n/).map(function(s){return s.trim();}).filter(Boolean):[];
+    out[store]={
+      address:addrCol>=0?(row[addrCol]||"").trim():"",
+      area:areaCol>=0?(row[areaCol]||"").trim():"",
+      floors:floorCol>=0?(row[floorCol]||"").trim():"",
+      vendor:vendorCol>=0?(row[vendorCol]||"").trim():"",
+      photos:photos,
+      openedDate:openCol>=0?(row[openCol]||"").trim():"",
+      floorPlanLink:planCol>=0?(row[planCol]||"").trim():"",
+      estimateDocLink:"",
+      note:noteCol>=0?(row[noteCol]||"").trim():""
+    };
   }
   return out;
 }
@@ -1437,7 +1479,7 @@ var SAMPLE_INTERIOR={
 var selectedInterior=null;
 function renderInteriorPage(){
   document.getElementById("interior-list").innerHTML=storeList.map(function(nm){
-    var has=!!SAMPLE_INTERIOR[nm];
+    var has=!!(interiorData[nm]||SAMPLE_INTERIOR[nm]);
     return '<div class="ss-item'+(selectedInterior===nm?' active':'')+'" data-interior="'+attrEscape(nm)+'">'
       +'<span class="ss-nm">'+nm+'</span>'
       +(has?'<span class="ss-type"><i class="ti ti-circle-check" style="font-size:13px;color:var(--green);"></i></span>':'<span class="tag none">정보없음</span>')
@@ -1465,7 +1507,7 @@ function openInteriorLightbox(el){
 function showInteriorDetail(nm){
   selectedInterior=nm;
   document.querySelectorAll('#interior-list .ss-item').forEach(function(el){ el.classList.toggle("active", el.getAttribute("data-interior")===nm); });
-  var info=SAMPLE_INTERIOR[nm];
+  var info=interiorData[nm]||SAMPLE_INTERIOR[nm];
   var t=storeType(nm);
   var html='<div class="ss-store-hd"><i class="ti '+(TYPE_ICON[t]||'ti-building-store')+'"></i><h2>'+nm+'</h2></div>';
   if(!info){
@@ -1617,6 +1659,7 @@ function init(){
   })); }
   if(REPORTS_CSV_URL){ jobs.push(loadCSV(REPORTS_CSV_URL).then(function(rows){ reports=normalizeReports(rows); useReportStatus=true; }).catch(function(){ useReportStatus=false; })); }
   if(ISSUES_CSV_URL){ jobs.push(loadCSV(ISSUES_CSV_URL).then(function(rows){ issues=normalizeIssues(rows); }).catch(function(){ issues=[]; })); }
+  if(INTERIOR_CSV_URL){ jobs.push(loadCSV(INTERIOR_CSV_URL).then(function(rows){ interiorData=normalizeInterior(rows); }).catch(function(){ interiorData={}; })); }
   Promise.all(jobs).then(function(){
     if(!schedule.length){ usingSample=true; schedule=normalize(SAMPLE_SCHEDULE.map(function(r){return r;})); }
     if(!storeList.length){ storeList=SAMPLE_STORES.slice(); }
