@@ -578,6 +578,16 @@ function normalizeIssues(rows){
 }
 
 var interiorData={};
+/* 구글 드라이브 공유 링크(파일 보기 페이지 등)에서 파일 ID만 뽑아
+   브라우저에서 바로 이미지로 렌더링되는 썸네일 URL로 바꿔줍니다.
+   이미 일반 이미지 URL(https://... .jpg 등)이면 그대로 둡니다. */
+function driveDirectImg(url){
+  url=(url||"").trim();
+  if(!url) return url;
+  var m=url.match(/\/d\/([a-zA-Z0-9_-]{10,})/) || url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  if(m) return "https://drive.google.com/thumbnail?id="+m[1]+"&sz=w1000";
+  return url;
+}
 function normalizeInterior(rows){
   if(!rows.length) return {};
   var header=rows[0].map(function(c){return (c||"").toLowerCase();});
@@ -602,7 +612,7 @@ function normalizeInterior(rows){
     var row=rows[r];
     var store=storeCol>=0?(row[storeCol]||"").trim():"";
     if(!store) continue;
-    var photos=photoCol>=0?(row[photoCol]||"").split(/\r?\n/).map(function(s){return s.trim();}).filter(Boolean):[];
+    var photos=photoCol>=0?(row[photoCol]||"").split(/\r?\n/).map(function(s){return s.trim();}).filter(Boolean).map(driveDirectImg):[];
     out[store]={
       address:addrCol>=0?(row[addrCol]||"").trim():"",
       area:areaCol>=0?(row[areaCol]||"").trim():"",
