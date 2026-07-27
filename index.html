@@ -1186,7 +1186,15 @@ function extractMainCustomerType(text){
 function extractMainCustomer(text){
   /* "5대"(마네킹 5대 등 수량)를 나이대로 오인하지 않도록, 10~90의 정배수이거나
      "2-30대"류 축약 표기일 때만 나이대로 인정합니다. */
-  var ageMatch=text.match(/\d{1,2}\s*[-~]\s*\d{1,2}\s*대|[1-9]0\s*대/);
+  var AGE_SRC="\\d{1,2}\\s*[-~]\\s*\\d{1,2}\\s*대|[1-9]0\\s*대";
+  var ageMatch=text.match(new RegExp(AGE_SRC));
+  /* 평일/주말 타겟이 다르게 적혀있으면 둘 다 보여줍니다. 예: "평일 2-30대 / 주말 4-50대" */
+  var wdM=text.match(new RegExp("평일[^,.\\n]{0,25}?("+AGE_SRC+")"));
+  var weM=text.match(new RegExp("주말[^,.\\n]{0,25}?("+AGE_SRC+")"));
+  if(wdM&&weM){
+    var wdAge=wdM[1].replace(/\s+/g,""), weAge=weM[1].replace(/\s+/g,"");
+    if(wdAge!==weAge) return {text:"평일 "+wdAge+" · 주말 "+weAge,gender:null};
+  }
   var gender=null;
   if(/여성|여자/.test(text)) gender="여성";
   else if(/남성|남자/.test(text)) gender="남성";
