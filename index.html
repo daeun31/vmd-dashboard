@@ -1198,8 +1198,7 @@ function extractMainCustomer(text){
   return {text:nat,gender:null};
 }
 function renderBullets(text){
-  var norm=(text||"").replace(/\r/g,"").replace(/\n\s*[-•●]\s*/g,"\n").split(/\n+/).join(". ");
-  var items=dedupeSentences(norm.split(".").map(function(s){return s.trim();}).filter(function(s){return s.length>3;}));
+  var items=dedupeSentences(splitSentences(text));
   if(!items.length) return '<div class="fb-card-body">'+htmlEscape(text||"")+'</div>';
   return '<ul class="fb-bullets">'+items.map(function(s){
     var colonIdx=s.search(/[:：]/);
@@ -1321,8 +1320,12 @@ function shortLabel(sentence){
   if(!/(이슈|문제|사항)$/.test(s)) s+=" 이슈";
   return s;
 }
+function stripLeadBullet(line){
+  return line.trim().replace(/^[-•●]+\s*/,"");
+}
 function splitSentences(text){
-  var norm=(text||"").replace(/\r/g,"").replace(/\n\s*[-•●]\s*/g,"\n").split(/\n+/).join(". ");
+  var lines=(text||"").replace(/\r/g,"").split(/\n+/).map(stripLeadBullet).filter(Boolean);
+  var norm=lines.join(". ");
   return norm.split(".").map(function(s){return s.trim();}).filter(function(s){return s.length>3;});
 }
 function extractIssueItems(chunk){
