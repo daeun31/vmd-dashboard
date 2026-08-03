@@ -686,6 +686,7 @@ function syncIssuesFromReports(){
     pf.sections.forEach(function(s){
       if(s.label!=="매장 요청사항"&&s.label!=="운영이슈 및 개선사항") return;
       extractIssueItems(s.raw).forEach(function(it){
+        if(ISSUE_EXCLUDE.test(it.label)||ISSUE_EXCLUDE.test(it.detail)) return;
         registerIssue(ev.t,s.label,it.label,ev);
       });
     });
@@ -1323,6 +1324,8 @@ function getFeedback(rep){
 }
 
 var ISSUE_KEY=/시급|필요|요청|희망|강화|개선|부족|고장|훼손|반영|보수|지원|권장|튿어|찢어|파손|오염|불량|분실|누수|손상|미흡|불편/;
+/* 인원/인력 관련 내용은 매장 피드백 카드엔 그대로 보이되, 이슈트래커에는 등록하지 않습니다. */
+var ISSUE_EXCLUDE=/인원|인력/;
 function shortLabel(sentence){
   var s=sentence.trim().replace(/\.$/,"");
   var LIMIT=20;
@@ -1402,13 +1405,18 @@ function showVisitDetail(key){
         if(isActionable){
           var items=extractIssueItems(s.raw);
           var itemsHtml=items.map(function(it){
-            registerIssue(e.t,s.label,it.label,e);
-            var curStatus=findIssueStatus(e.t,s.label,it.label);
-            var badgeCls=curStatus==="완료"?"tag done":(curStatus==="진행중"?"tag miss":"tag none");
-            var badgeTxt=curStatus==="완료"?"해결":curStatus;
-            var issueKey=issueRowKey(e.t,s.label,it.label);
+            var excluded=ISSUE_EXCLUDE.test(it.label)||ISSUE_EXCLUDE.test(it.detail);
+            if(!excluded) registerIssue(e.t,s.label,it.label,e);
+            var statusHtml="";
+            if(!excluded){
+              var curStatus=findIssueStatus(e.t,s.label,it.label);
+              var badgeCls=curStatus==="완료"?"tag done":(curStatus==="진행중"?"tag miss":"tag none");
+              var badgeTxt=curStatus==="완료"?"해결":curStatus;
+              var issueKey=issueRowKey(e.t,s.label,it.label);
+              statusHtml='<span class="'+badgeCls+' fb-status-link" style="cursor:pointer;" data-issue-key="'+attrEscape(issueKey)+'">'+badgeTxt+'</span>';
+            }
             return '<div class="fb-issue-item"><div class="fb-issue-top"><div class="fb-issue-label">'+htmlEscape(it.label)+'</div>'
-              +'<span class="'+badgeCls+' fb-status-link" style="cursor:pointer;" data-issue-key="'+attrEscape(issueKey)+'">'+badgeTxt+'</span>'
+              +statusHtml
               +'</div>'
               +'<div class="fb-issue-detail">'+htmlEscape(it.detail)+'</div></div>';
           }).join("");
