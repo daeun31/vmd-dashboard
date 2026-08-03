@@ -1211,9 +1211,9 @@ function renderBullets(text){
   return '<ul class="fb-bullets">'+items.map(function(s){
     var colonIdx=s.search(/[:：]/);
     if(colonIdx>0&&colonIdx<20){
-      return '<li><b>'+htmlEscape(s.slice(0,colonIdx).trim())+'</b>: '+htmlEscape(s.slice(colonIdx+1).trim())+'.</li>';
+      return '<li><b>'+htmlEscape(s.slice(0,colonIdx).trim())+'</b>: '+htmlEscape(s.slice(colonIdx+1).trim())+'</li>';
     }
-    return '<li>'+htmlEscape(s)+'.</li>';
+    return '<li>'+htmlEscape(s)+'</li>';
   }).join("")+'</ul>';
 }
 /* 규칙 기반 자동 요약: 항목별 가중치 + 핵심 키워드 포함 여부로 문장 점수를 매겨 상위 1~2문장을 뽑습니다 */
