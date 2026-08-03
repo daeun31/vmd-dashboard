@@ -21,7 +21,7 @@ var INTERIOR_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBw
 <style>
 :root{
   --bg:#FBF9F5; --card:#FFFFFF; --ink:#1A1A1A; --ink-2:#6B6B6B; --ink-3:#9B9B9B;
-  --line:#E6E1D6; --accent:#1A1A1A; --accent-soft:#F0ECE3; --accent-deep:#000000;
+  --line:#E6E1D6; --accent:#C96B56; --accent-soft:#F3E1DC; --accent-deep:#9A5148;
   --green:#4F7A6B; --green-soft:#E7EEEA; --green-deep:#2E4A40;
   --amber:#B8925A; --amber-soft:#F2E9DC; --amber-deep:#6B4F26;
   --pink:#B97C82; --pink-soft:#F3E7E7; --pink-deep:#6B3A3E;
@@ -43,7 +43,9 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .page-head p{font-size:13px;color:var(--ink-2);margin-top:2px;}
 .month-pick select{font-family:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer;}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px;}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;}
+.kpi{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;}
+.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);}
+#kpis .kpi:first-child .val{color:var(--accent-deep);}
 .kpi-link{cursor:pointer;}
 .kpi-link:hover{border-color:var(--ink-3);}
 .kpi .lbl{font-size:12px;color:var(--ink-2);}
@@ -75,7 +77,7 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .cal .day.holiday .num{color:#D97B72;}
 .hol{display:block;font-size:11px;font-weight:700;color:#D97B72;line-height:1.5;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ev{display:block;font-size:11px;font-weight:600;line-height:1.5;padding:1px 5px;border-radius:5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ev.ev-other{background:transparent!important;border:1px dashed var(--line);color:var(--ink-3)!important;font-weight:500;}
+.ev.ev-other{background:var(--accent-soft)!important;border:none;color:var(--accent-deep)!important;font-weight:600;}
 .ev-wrap{max-height:38px;overflow:hidden;}
 .day.expanded .ev-wrap{max-height:none;}
 .ev-more{display:block;font-size:11px;font-weight:600;color:var(--accent);padding:1px 5px;cursor:pointer;}
@@ -272,7 +274,7 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
 
 <nav class="topnav">
   <div class="topnav-in">
-    <span class="brand"><i class="ti ti-layout-grid"></i>VM 대시보드</span>
+    <span class="brand"><i class="ti ti-hanger"></i>VM 대시보드</span>
     <span class="sync" id="sync"><i class="ti ti-cloud"></i>데이터 불러오는 중…</span>
   </div>
 </nav>
@@ -453,7 +455,7 @@ function getHoliday(Y,M,D){
 var dows=["일","월","화","수","목","금","토"];
 var MON_EN=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 var MON_FULL=["","January","February","March","April","May","June","July","August","September","October","November","December"];
-var palette=[["#3E5C76","var(--accent-soft)","var(--accent-deep)"],["#B97C82","var(--pink-soft)","var(--pink-deep)"],["#B8925A","var(--amber-soft)","var(--amber-deep)"],["#3E6357","var(--green-soft)","var(--green-deep)"]];
+var palette=[["#3E5C76","#E7EDF1","#24374A"],["#8C6B8A","#EFE6EE","#4E3650"],["#B8925A","var(--amber-soft)","var(--amber-deep)"],["#3E6357","var(--green-soft)","var(--green-deep)"]];
 var whoStyle={};
 
 function parseCSV(text){
@@ -721,7 +723,7 @@ function isMissing(e){
   return (!e._report && isPastOrToday(e));
 }
 
-var OPEN_STYLE={dot:"#6E96AC",bg:"#E7EEF3",fg:"#2D2D2D"};
+var OPEN_STYLE={dot:"#C9932F",bg:"#F5ECD9",fg:"#2D2D2D"};
 function isGrandOpening(t){
   var s=(t||"").trim();
   if(/작업|셋팅/.test(s)) return false;
@@ -729,10 +731,10 @@ function isGrandOpening(t){
 }
 function setupWho(){
   whoStyle={
-    "전체":{dot:"#4F7A6B",bg:"var(--green-soft)",fg:"#2D2D2D"},
-    "기타":{dot:"#9B9B9B",bg:"var(--bg)",fg:"#2D2D2D"},
-    "다은":{dot:"#3E5C76",bg:"var(--accent-soft)",fg:"#2D2D2D"},
-    "민지":{dot:"#B97C82",bg:"var(--pink-soft)",fg:"#2D2D2D"}
+    "전체":{dot:"#4F7A6B",bg:"var(--green-soft)",fg:"#1A1A1A"},
+    "기타":{dot:"#9B9B9B",bg:"#EFECE4",fg:"#1A1A1A"},
+    "다은":{dot:"#3E5C76",bg:"#E7EDF1",fg:"#1A1A1A"},
+    "민지":{dot:"#8C6B8A",bg:"#EFE6EE",fg:"#1A1A1A"}
   };
   var PREFERRED=["다은","민지"];
   var others=[]; schedule.forEach(function(e){ if(e.who!=="전체"&&e.who!=="기타"&&others.indexOf(e.who)<0) others.push(e.who); });
