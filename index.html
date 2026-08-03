@@ -20,8 +20,8 @@ var INTERIOR_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBw
 </script>
 <style>
 :root{
-  --bg:#FAFAF9; --card:#FFFFFF; --ink:#2D2D2D; --ink-2:#6B6B6B; --ink-3:#9B9B9B;
-  --line:#E5E3DD; --accent:#3E5C76; --accent-soft:#E8EDF1; --accent-deep:#24374A;
+  --bg:#FBF9F5; --card:#FFFFFF; --ink:#1A1A1A; --ink-2:#6B6B6B; --ink-3:#9B9B9B;
+  --line:#E6E1D6; --accent:#1A1A1A; --accent-soft:#F0ECE3; --accent-deep:#000000;
   --green:#4F7A6B; --green-soft:#E7EEEA; --green-deep:#2E4A40;
   --amber:#B8925A; --amber-soft:#F2E9DC; --amber-deep:#6B4F26;
   --pink:#B97C82; --pink-soft:#F3E7E7; --pink-deep:#6B3A3E;
@@ -82,10 +82,10 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .day.expanded{background:var(--card);z-index:2;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.08);}
 @media (max-width:700px){.cal .day{min-height:58px;padding:4px;}.ev{font-size:11px;padding:1px 3px;}.hol{font-size:10.5px;}}
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--ink-2);}
-.tabs{display:flex;gap:4px;padding:0 20px;max-width:1080px;margin:0 auto;}
-.tab-btn{font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink-3);background:transparent;border:none;border-bottom:2px solid transparent;padding:10px 6px;cursor:pointer;margin-right:14px;}
-.tab-btn.active{color:var(--ink);border-bottom-color:var(--accent);}
-.tab-btn:hover{color:var(--ink);}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;padding:14px 20px;max-width:1080px;margin:0 auto;}
+.tab-btn{font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-2);background:transparent;border:none;border-radius:999px;padding:8px 16px;cursor:pointer;transition:background-color .2s,color .2s;}
+.tab-btn.active{color:#fff;background:var(--accent);}
+.tab-btn:hover{color:var(--ink);background:var(--accent-soft);}
 .legend span{display:inline-flex;align-items:center;gap:5px;}
 .legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
 .chip{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;margin-right:8px;}
