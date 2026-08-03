@@ -1339,7 +1339,7 @@ function getFeedback(rep){
 
 var ISSUE_KEY=/시급|필요|요청|희망|강화|개선|부족|고장|훼손|반영|보수|지원|권장|튿어|찢어|파손|오염|불량|분실|누수|손상|미흡|불편/;
 /* 인원/인력 관련 내용은 매장 피드백 카드엔 그대로 보이되, 이슈트래커에는 등록하지 않습니다. */
-var ISSUE_EXCLUDE=/인원|인력/;
+var ISSUE_EXCLUDE=/인원|인력|재고/;
 function shortLabel(sentence){
   var s=sentence.trim().replace(/\.$/,"");
   var LIMIT=20;
@@ -1516,32 +1516,38 @@ var ISSUE_STATUS_COLOR={"미해결":"#C0392B","진행중":"#BA7517","보류":"#7
 var ISSUE_TYPE_ICON={"매장요청사항":"ti-clipboard-list","운영이슈 및 개선사항":"ti-alert-triangle"};
 var issueSearchQuery="", issueTypeFilter="", issueGroupMode="status";
 function issueMatchesFilter(is){
+  if(ISSUE_EXCLUDE.test(is.content||"")) return false;
   if(issueTypeFilter && is.type!==issueTypeFilter) return false;
   if(issueSearchQuery && (is.store||"").indexOf(issueSearchQuery)<0) return false;
   return true;
 }
-/* 같은 매장·유형 안에서 내용이 비슷한 이슈가 몇 건 더 있는지 계산합니다.
-   자동으로 합치지는 않고, 배지로만 알려줘서 사람이 직접 판단해서 정리할 수 있게 합니다. */
-function computeDupCounts(list){
+/* 같은 매장·유형 안에서 내용이 겹치는 이슈는 가장 최근 것 하나만 남기고 화면에서 정리합니다.
+   원본 시트 데이터를 지우는 게 아니라, 대시보드에 보여줄 때만 하나로 합쳐서 보여줘요. */
+function dedupeIssues(list){
   var buckets={};
   list.forEach(function(is){ var k=(is.store||"")+"||"+(is.type||""); (buckets[k]=buckets[k]||[]).push(is); });
-  var dupCount={};
+  var kept=[];
   Object.keys(buckets).forEach(function(k){
-    var arr=buckets[k];
-    arr.forEach(function(a){
-      var na=normDedup(a.content||"");
-      var cnt=0;
-      arr.forEach(function(b){
-        if(a===b||!na) return;
-        var nb=normDedup(b.content||"");
-        if(nb&&(na.indexOf(nb)>=0||nb.indexOf(na)>=0)) cnt++;
-      });
-      dupCount[issueRowKey(a.store,a.type,a.content)]=cnt;
+    var arr=buckets[k].slice().sort(function(a,b){
+      var da=a.y?toDate(a):new Date(0), db=b.y?toDate(b):new Date(0);
+      return db-da;
     });
+    var localKept=[];
+    arr.forEach(function(is){
+      var n=normDedup(is.content||"");
+      var match=null;
+      for(var i=0;i<localKept.length;i++){
+        var nk=normDedup(localKept[i].content||"");
+        if(n&&nk&&(n.indexOf(nk)>=0||nk.indexOf(n)>=0)){ match=localKept[i]; break; }
+      }
+      if(match){ match._mergedCount=(match._mergedCount||1)+1; }
+      else{ is._mergedCount=1; localKept.push(is); }
+    });
+    kept=kept.concat(localKept);
   });
-  return dupCount;
+  return kept;
 }
-function issueRowHTML(is,today,dupCount){
+function issueRowHTML(is,today){
   var icon=ISSUE_TYPE_ICON[is.type]||"ti-file-text";
   var dueTxt="";
   if(is.due && is.status!=="완료"){
@@ -1559,10 +1565,9 @@ function issueRowHTML(is,today,dupCount){
     +'<button class="seg-btn'+(is.status==="보류"?" active hold":"")+'" data-set="보류">보류</button>'
     +'<button class="seg-btn'+(is.status==="완료"?" active good":"")+'" data-set="완료">완료</button>'
     +'</div>';
-  var dupKey=issueRowKey(is.store,is.type,is.content);
-  var dupN=dupCount?(dupCount[dupKey]||0):0;
-  var dupBadge=dupN>0?' <span class="tag" style="background:var(--accent-soft);color:var(--accent-deep);" title="내용이 비슷한 이슈가 더 있어요"><i class="ti ti-copy" style="font-size:10.5px;vertical-align:-1px;"></i> 유사 '+dupN+'건</span>':"";
-  return '<div class="issue-row" data-issue-key="'+attrEscape(dupKey)+'"><i class="ti '+icon+' icon"></i><div class="body">'
+  var mergedN=is._mergedCount||1;
+  var dupBadge=mergedN>1?' <span class="tag" style="background:var(--accent-soft);color:var(--accent-deep);" title="비슷한 이슈 '+mergedN+'건을 하나로 정리했어요"><i class="ti ti-copy" style="font-size:10.5px;vertical-align:-1px;"></i> 중복 '+mergedN+'건 정리</span>':"";
+  return '<div class="issue-row" data-issue-key="'+attrEscape(issueRowKey(is.store,is.type,is.content))+'"><i class="ti '+icon+' icon"></i><div class="body">'
     +'<div class="meta">'+(is.store?'<b style="color:var(--ink);">'+htmlEscape(is.store)+'</b>':'')+(is.type?' · '+htmlEscape(is.type):'')+(is.y?' · '+is.m+'/'+is.d+' 등록':'')+dupBadge+'</div>'
     +'<div class="txt">'+htmlEscape(is.content)+'</div>'+dueTxt+noteTxt
     +'</div><div class="issue-right">'+seg+resolveInput+'</div></div>';
@@ -1594,7 +1599,7 @@ function renderIssuesPage(){
     document.getElementById("issue-list").innerHTML='<p style="font-size:13px;color:var(--ink-3);">조건에 맞는 이슈가 없어요. 검색어나 필터를 확인해 주세요.</p>';
     return;
   }
-  var dupCount=computeDupCounts(filtered);
+  filtered=dedupeIssues(filtered);
 
   if(issueGroupMode==="store"){
     var byStore={}, storeOrder=[];
@@ -1615,7 +1620,7 @@ function renderIssuesPage(){
       });
       var openCnt=list.filter(function(i){return i.status!=="완료";}).length;
       return '<div class="issue-grp"><div class="issue-grp-hd"><span class="dot" style="background:var(--accent);"></span>'+htmlEscape(store)+'<span class="cnt">미완료 '+openCnt+'건 · 총 '+list.length+'건</span></div>'
-        +list.map(function(is){ return issueRowHTML(is,today,dupCount); }).join("")
+        +list.map(function(is){ return issueRowHTML(is,today); }).join("")
         +'</div>';
     }).join("");
     return;
@@ -1628,7 +1633,7 @@ function renderIssuesPage(){
     });
     if(!list.length) return "";
     return '<div class="issue-grp"><div class="issue-grp-hd"><span class="dot" style="background:'+ISSUE_STATUS_COLOR[st]+';"></span>'+st+'<span class="cnt">'+list.length+'건</span></div>'
-      +list.map(function(is){ return issueRowHTML(is,today,dupCount); }).join("")
+      +list.map(function(is){ return issueRowHTML(is,today); }).join("")
       +'</div>';
   }).join("");
 }
