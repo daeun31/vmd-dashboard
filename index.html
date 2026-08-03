@@ -127,6 +127,7 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .glance-row .dt{min-width:38px;font-size:12px;color:var(--ink-3);}
 .glance-row .nm{flex:1;}
 .glance-row.past{opacity:.55;}
+.glance-row.glance-other .nm{color:var(--ink-2);}
 .sl-sub{margin-top:8px;}
 .sl-sub:first-of-type{margin-top:6px;}
 .sl-sub-hd{display:flex;align-items:center;font-size:11.5px;font-weight:700;color:var(--ink);padding:3px 0;border-bottom:1px dashed var(--line);}
@@ -887,15 +888,15 @@ function renderMonth(key){
     var hol=getHoliday(e.y,e.m,e.d);
     if(hol&&(e.t||"").trim()===hol.trim()) return '<span class="tag" style="background:var(--red-soft);color:var(--red-deep);">공휴일</span>';
     if(/오픈/.test(e.t)) return '<span class="tag" style="background:var(--amber-soft);color:var(--amber-deep);">작업</span>';
-    if(/연차|휴무|대휴|경조|패밀리/.test(e.t)) return '<span class="tag" style="background:var(--bg);color:var(--ink-2);">휴무</span>';
+    if(/연차|휴가|휴무|대휴|경조|패밀리/.test(e.t)) return '<span class="tag" style="background:var(--bg);color:var(--ink-2);">휴무</span>';
     return '<span class="tag" style="background:var(--bg);color:var(--ink-2);">행사</span>';
   }
   function rows(list,isEtc){
     if(!list.length) return '<div class="glance-empty">일정 없음</div>';
     return list.map(function(e){
       var past=isPastOrToday(e), isStore=storeList.indexOf(e.t)>=0;
-      var tag=isEtc?etcTag(e):(isStore?('<span class="tag '+(isDone(e)?'done">완료':(isMissing(e)?'miss">미완료':'plan">예정'))+'</span>'):'');
-      return '<div class="glance-row'+(past&&isDone(e)?' past':'')+'"><span class="dt">'+M+'/'+e.d+'</span><span class="nm">'+e.t+'</span>'+tag+'</div>';
+      var tag=isStore?('<span class="tag '+(isDone(e)?'done">완료':(isMissing(e)?'miss">미완료':'plan">예정'))+'</span>'):etcTag(e);
+      return '<div class="glance-row'+(past&&isDone(e)?' past':'')+(isStore?'':' glance-other')+'"><span class="dt">'+M+'/'+e.d+'</span><span class="nm">'+e.t+'</span>'+tag+'</div>';
     }).join("");
   }
   function openRows(list){
@@ -1672,6 +1673,24 @@ function openInteriorLightbox(el){
   overlay.addEventListener("click",function(e){ if(e.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 }
+/* 매장면적/층구성을 숫자만 입력해도 자동으로 단위를 붙여 보여줍니다.
+   이미 "평"이나 "py", "F"/"층"이 적혀있으면 그대로 두고 중복으로 붙이지 않습니다. */
+function formatArea(raw){
+  var v=(raw||"").trim();
+  if(!v) return v;
+  if(/py|평/i.test(v)) return v;
+  return v+"py";
+}
+function formatFloors(raw){
+  var v=(raw||"").trim();
+  if(!v) return v;
+  return v.split("/").map(function(s){
+    s=s.trim();
+    if(!s) return s;
+    if(/f$/i.test(s)||/층/.test(s)) return s;
+    return s+"F";
+  }).join("/");
+}
 function showInteriorDetail(nm){
   selectedInterior=nm;
   document.querySelectorAll('#interior-list .ss-item').forEach(function(el){ el.classList.toggle("active", el.getAttribute("data-interior")===nm); });
@@ -1684,7 +1703,7 @@ function showInteriorDetail(nm){
     html+=interiorCoverHTML(info.photos)
       +'<div class="fb-card-grid" style="margin-top:12px;">'
       +'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-map-pin"></i>매장 주소</div><div class="fb-card-body">'+(info.address||"-")+'</div></div>'
-      +'<div class="fb-card"><div class="fb-card-hd"><i class="ti ti-ruler-2"></i>매장 면적 · 층 구성</div><div class="fb-card-body">'+info.area+' · '+info.floors+'</div></div>'
+      +'<div class="fb-card"><div class="fb-card-hd"><i class="ti ti-ruler-2"></i>매장 면적 · 층 구성</div><div class="fb-card-body">'+formatArea(info.area)+' · '+formatFloors(info.floors)+'</div></div>'
       +'<div class="fb-card"><div class="fb-card-hd"><i class="ti ti-tools"></i>인테리어 업체명</div><div class="fb-card-body">'+(info.vendor||"-")+'</div></div>'
       +'<div class="fb-card"><div class="fb-card-hd"><i class="ti ti-calendar-event"></i>오픈일</div><div class="fb-card-body">'+(info.openedDate||"-")+'</div></div>'
       +'<div class="fb-card fb-full"><div class="fb-card-hd"><i class="ti ti-note"></i>비고</div><div class="fb-card-body">'+info.note+'</div></div>'
