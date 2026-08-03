@@ -21,11 +21,11 @@ var INTERIOR_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBw
 <style>
 :root{
   --bg:#FBF9F5; --card:#FFFFFF; --ink:#1A1A1A; --ink-2:#6B6B6B; --ink-3:#9B9B9B;
-  --line:#E6E1D6; --accent:#C96B56; --accent-soft:#F3E1DC; --accent-deep:#9A5148;
-  --green:#4F7A6B; --green-soft:#E7EEEA; --green-deep:#2E4A40;
-  --amber:#B8925A; --amber-soft:#F2E9DC; --amber-deep:#6B4F26;
-  --pink:#B97C82; --pink-soft:#F3E7E7; --pink-deep:#6B3A3E;
-  --red:#D97B72; --red-soft:#F7E4E1; --red-deep:#7A382F;
+  --line:#E6E1D6; --accent:#D65C82; --accent-soft:#FADEE7; --accent-deep:#7A1F3D;
+  --green:#3F9E76; --green-soft:#DFF2E9; --green-deep:#1D5C40;
+  --amber:#E0A526; --amber-soft:#FBF0D2; --amber-deep:#6B4A06;
+  --pink:#D65C82; --pink-soft:#FADEE7; --pink-deep:#7A1F3D;
+  --red:#D6402E; --red-soft:#FBDCD6; --red-deep:#7A2015;
   --radius:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -43,9 +43,7 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .page-head p{font-size:13px;color:var(--ink-2);margin-top:2px;}
 .month-pick select{font-family:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);cursor:pointer;}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px;}
-.kpi{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;}
-.kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);}
-#kpis .kpi:first-child .val{color:var(--accent-deep);}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;}
 .kpi-link{cursor:pointer;}
 .kpi-link:hover{border-color:var(--ink-3);}
 .kpi .lbl{font-size:12px;color:var(--ink-2);}
@@ -74,10 +72,10 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .cal .day.empty{background:transparent;border-color:transparent;}
 .cal .day.today{border:2px solid var(--accent);}
 .cal .day.today .num{color:var(--accent-deep);}
-.cal .day.holiday .num{color:#D97B72;}
-.hol{display:block;font-size:11px;font-weight:700;color:#D97B72;line-height:1.5;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal .day.holiday .num{color:#D6402E;}
+.hol{display:block;font-size:11px;font-weight:700;color:#D6402E;line-height:1.5;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ev{display:block;font-size:11px;font-weight:600;line-height:1.5;padding:1px 5px;border-radius:5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ev.ev-other{background:var(--accent-soft)!important;border:none;color:var(--accent-deep)!important;font-weight:600;}
+.ev.ev-other{background:#ECEAE4!important;border:none;color:#5F5E5A!important;font-weight:600;}
 .ev-wrap{max-height:38px;overflow:hidden;}
 .day.expanded .ev-wrap{max-height:none;}
 .ev-more{display:block;font-size:11px;font-weight:600;color:var(--accent);padding:1px 5px;cursor:pointer;}
@@ -455,7 +453,7 @@ function getHoliday(Y,M,D){
 var dows=["일","월","화","수","목","금","토"];
 var MON_EN=["","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 var MON_FULL=["","January","February","March","April","May","June","July","August","September","October","November","December"];
-var palette=[["#3E5C76","#E7EDF1","#24374A"],["#8C6B8A","#EFE6EE","#4E3650"],["#B8925A","var(--amber-soft)","var(--amber-deep)"],["#3E6357","var(--green-soft)","var(--green-deep)"]];
+var palette=[["#35668F","#DCEAF5","#1B3A54"],["#A0578F","#F5DCEF","#5C1F4F"],["#2E9E86","#D8F2EA","#134A3B"],["#A67A3E","#F5E7CE","#4A3213"]];
 var whoStyle={};
 
 function parseCSV(text){
@@ -723,7 +721,7 @@ function isMissing(e){
   return (!e._report && isPastOrToday(e));
 }
 
-var OPEN_STYLE={dot:"#C9932F",bg:"#F5ECD9",fg:"#2D2D2D"};
+var OPEN_STYLE={dot:"#2F8FCE",bg:"#DDEEF8",fg:"#2D2D2D"};
 function isGrandOpening(t){
   var s=(t||"").trim();
   if(/작업|셋팅/.test(s)) return false;
@@ -731,10 +729,10 @@ function isGrandOpening(t){
 }
 function setupWho(){
   whoStyle={
-    "전체":{dot:"#4F7A6B",bg:"var(--green-soft)",fg:"#1A1A1A"},
+    "전체":{dot:"#D65C82",bg:"var(--pink-soft)",fg:"#1A1A1A"},
     "기타":{dot:"#9B9B9B",bg:"#EFECE4",fg:"#1A1A1A"},
-    "다은":{dot:"#3E5C76",bg:"#E7EDF1",fg:"#1A1A1A"},
-    "민지":{dot:"#8C6B8A",bg:"#EFE6EE",fg:"#1A1A1A"}
+    "다은":{dot:"#3F9E76",bg:"var(--green-soft)",fg:"#1A1A1A"},
+    "민지":{dot:"#E0A526",bg:"var(--amber-soft)",fg:"#1A1A1A"}
   };
   var PREFERRED=["다은","민지"];
   var others=[]; schedule.forEach(function(e){ if(e.who!=="전체"&&e.who!=="기타"&&others.indexOf(e.who)<0) others.push(e.who); });
@@ -749,7 +747,7 @@ function setupWho(){
     +others.map(function(nm){return '<span><i style="background:'+whoStyle[nm].dot+';"></i>'+nm+'</span>';}).join("")
     +'<span><i style="background:'+OPEN_STYLE.dot+';"></i>오픈</span>'
     +'<span><i style="background:#9B9B9B;"></i>기타 일정</span>'
-    +'<span><i style="background:#D97B72;"></i>공휴일</span>';
+    +'<span><i style="background:#D6402E;"></i>공휴일</span>';
   return others;
 }
 
@@ -848,7 +846,7 @@ function renderMonth(key){
   })();
   document.getElementById("kpis").innerHTML=
     '<div class="kpi"><div class="lbl">이달 라운딩</div><div class="val">'+done+' / '+visits.length+'개소</div><div class="bar"><span style="width:'+pct+'%;"></span></div><div class="sub">진행률 '+pct+'%</div></div>'
-    +'<div class="kpi"><div class="lbl">분기 진행률 ('+quarterStats.label+')</div><div class="val">'+Math.round(quarterStats.total?quarterStats.done/quarterStats.total*100:0)+'%</div><div class="bar"><span style="width:'+(quarterStats.total?Math.round(quarterStats.done/quarterStats.total*100):0)+'%;background:#3E5C76;"></span></div><div class="sub">'+quarterStats.done+' / '+quarterStats.total+'개소 완료</div></div>'
+    +'<div class="kpi"><div class="lbl">분기 진행률 ('+quarterStats.label+')</div><div class="val">'+Math.round(quarterStats.total?quarterStats.done/quarterStats.total*100:0)+'%</div><div class="bar"><span style="width:'+(quarterStats.total?Math.round(quarterStats.done/quarterStats.total*100):0)+'%;background:var(--accent);"></span></div><div class="sub">'+quarterStats.done+' / '+quarterStats.total+'개소 완료</div></div>'
     +'<div class="kpi kpi-link" id="kpi-unvisited"><div class="lbl">분기 내 미방문<i class="ti ti-chevron-right" style="font-size:13px;color:var(--ink-3);float:right;"></i></div><div class="val">'+neverVisited.length+'개소</div><div class="sub'+(neverVisited.length?' bad':'')+'">'+(neverVisited.length?quarterStats.label+' 일정 없음 · 클릭해서 보기':'분기 내 모든 매장 일정 있음')+'</div></div>'
     +'<div class="kpi"><div class="lbl">이달 기타 일정</div><div class="val">'+etc+'건</div><div class="sub">휴무·행사·오픈 포함</div></div>';
 
@@ -958,7 +956,7 @@ function storeType(nm){
 }
 var TYPE_ORDER=["로드샵","백화점","쇼핑몰","아울렛"];
 
-function donutColor(pct){ if(pct>=80) return "#4F7A6B"; if(pct>=40) return "#3E5C76"; return "#B8925A"; }
+function donutColor(pct){ if(pct>=80) return "#3F9E76"; if(pct>=40) return "#35668F"; return "#E0A526"; }
 
 function donutSVG(pct,done,total,size){
   size=size||112;
@@ -1022,16 +1020,16 @@ function renderInsights(){
     +'</div>');
 
   tiles.push('<div class="insight-tile">'
-    +'<div class="insight-tile-hd"><i class="ti ti-alert-triangle" style="color:#D97B72;"></i>가장 오래된 미해결</div>'
+    +'<div class="insight-tile-hd"><i class="ti ti-alert-triangle" style="color:#D6402E;"></i>가장 오래된 미해결</div>'
     +(oldest
-      ?'<div class="insight-tile-body"><div class="insight-big" style="color:#D97B72;">'+(elapsed>0?elapsed+'일째':'오늘')+'</div><div class="insight-sub">'+(oldest.store?'<b style="color:var(--ink);">'+htmlEscape(oldest.store)+'</b> · ':'')+htmlEscape(oldest.content)+'</div></div>'
+      ?'<div class="insight-tile-body"><div class="insight-big" style="color:#D6402E;">'+(elapsed>0?elapsed+'일째':'오늘')+'</div><div class="insight-sub">'+(oldest.store?'<b style="color:var(--ink);">'+htmlEscape(oldest.store)+'</b> · ':'')+htmlEscape(oldest.content)+'</div></div>'
       :'<div class="insight-tile-body"><div class="insight-big" style="font-size:15px;color:var(--ink-3);">0건</div><div class="insight-sub">미해결 이슈가 없어요. 모두 처리됐네요!</div></div>')
     +'</div>');
 
   tiles.push('<div class="insight-tile">'
-    +'<div class="insight-tile-hd"><i class="ti ti-repeat" style="color:#B8925A;"></i>반복 이슈 감지</div>'
+    +'<div class="insight-tile-hd"><i class="ti ti-repeat" style="color:#E0A526;"></i>반복 이슈 감지</div>'
     +(repeatTop
-      ?'<div class="insight-tile-body"><div class="insight-big" style="color:#B8925A;">'+repeatTop.cnt+'회</div><div class="insight-sub"><b style="color:var(--ink);">'+htmlEscape(repeatTop.store)+'</b> · '+htmlEscape(repeatTop.type)+'</div></div>'
+      ?'<div class="insight-tile-body"><div class="insight-big" style="color:#E0A526;">'+repeatTop.cnt+'회</div><div class="insight-sub"><b style="color:var(--ink);">'+htmlEscape(repeatTop.store)+'</b> · '+htmlEscape(repeatTop.type)+'</div></div>'
       :'<div class="insight-tile-body"><div class="insight-big" style="font-size:15px;color:var(--ink-3);">없음</div><div class="insight-sub">같은 매장·유형으로 반복된 이슈가 없어요.</div></div>')
     +'</div>');
 
@@ -1393,7 +1391,7 @@ function showVisitDetail(key){
     var vals=["매장관리","근무상태","디스플레이"].map(function(k){return rep.scores[k];}).filter(function(v){return v!==null&&v!==undefined;});
     var avg=vals.reduce(function(a,b){return a+b;},0)/vals.length;
     var pct=Math.max(0,Math.min(100,avg/SCORE_MAX*100));
-    var ringColor=pct>=80?"#4F7A6B":(pct>=50?"#3E5C76":"#B8925A");
+    var ringColor=pct>=80?"#3F9E76":(pct>=50?"#35668F":"#E0A526");
     var r=54,cc=2*Math.PI*r,off=cc*(1-pct/100);
     var ring='<svg viewBox="0 0 140 140" width="130" height="130">'
       +'<circle cx="70" cy="70" r="'+r+'" fill="none" stroke="var(--bg)" stroke-width="14"></circle>'
@@ -1514,7 +1512,7 @@ function setIssueField(store,type,content,field,value){
 }
 
 var ISSUE_STATUS_ORDER=["미해결","진행중","보류","완료"];
-var ISSUE_STATUS_COLOR={"미해결":"#D97B72","진행중":"#B8925A","보류":"#7A7F94","완료":"#4F7A6B"};
+var ISSUE_STATUS_COLOR={"미해결":"#D6402E","진행중":"#E0A526","보류":"#7A7F94","완료":"#3F9E76"};
 var ISSUE_TYPE_ICON={"매장요청사항":"ti-clipboard-list","운영이슈 및 개선사항":"ti-alert-triangle"};
 var issueSearchQuery="", issueTypeFilter="", issueGroupMode="status";
 function issueMatchesFilter(is){
