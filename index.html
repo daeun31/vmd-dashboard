@@ -106,6 +106,7 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .tag.plan{background:var(--accent-soft);color:var(--accent-deep);}
 .tag.miss{background:var(--amber-soft);color:var(--amber-deep);}
 .tag.none{background:var(--red-soft);color:var(--red-deep);}
+.tag.hold{background:var(--bg);color:var(--ink-2);}
 .glance-grp{margin-bottom:12px;}
 .glance-grp:last-child{margin-bottom:0;}
 .glance-hd{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--ink-2);padding-bottom:4px;border-bottom:1px solid var(--line);margin-bottom:2px;}
@@ -222,6 +223,7 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .seg-btn+.seg-btn{border-left:1px solid var(--line);}
 .seg-btn.active.bad{background:var(--red-soft);color:var(--red-deep);}
 .seg-btn.active.mid{background:var(--amber-soft);color:var(--amber-deep);}
+.seg-btn.active.hold{background:var(--bg);color:var(--ink-2);}
 .seg-btn.active.good{background:var(--green-soft);color:var(--green-deep);}
 .seg-btn.active.sel{background:var(--accent-soft);color:var(--accent-deep);}
 .fb-status-saved{font-size:10.5px;color:var(--ink-3);}
@@ -363,7 +365,19 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
   <section class="kpis" id="issue-kpis"></section>
 
   <section class="card">
-    <h2><i class="ti ti-list-check"></i>이슈 목록</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+      <h2 style="margin-bottom:0;"><i class="ti ti-list-check"></i>이슈 목록</h2>
+      <div class="fb-seg" id="issue-group-mode">
+        <button class="seg-btn active sel" data-mode="status">상태별</button>
+        <button class="seg-btn" data-mode="store">매장별</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+      <input type="text" id="issue-search" placeholder="매장명 검색" style="flex:1;min-width:160px;font-family:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);">
+      <select id="issue-type-filter" style="font-family:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);">
+        <option value="">전체 유형</option>
+      </select>
+    </div>
     <div id="issue-list"></div>
   </section>
 </div>
@@ -1410,7 +1424,7 @@ function showVisitDetail(key){
             var statusHtml="";
             if(!excluded){
               var curStatus=findIssueStatus(e.t,s.label,it.label);
-              var badgeCls=curStatus==="완료"?"tag done":(curStatus==="진행중"?"tag miss":"tag none");
+              var badgeCls=curStatus==="완료"?"tag done":(curStatus==="진행중"?"tag miss":(curStatus==="보류"?"tag hold":"tag none"));
               var badgeTxt=curStatus==="완료"?"해결":curStatus;
               var issueKey=issueRowKey(e.t,s.label,it.label);
               statusHtml='<span class="'+badgeCls+' fb-status-link" style="cursor:pointer;" data-issue-key="'+attrEscape(issueKey)+'">'+badgeTxt+'</span>';
@@ -1497,53 +1511,124 @@ function setIssueField(store,type,content,field,value){
   }
 }
 
-var ISSUE_STATUS_ORDER=["미해결","진행중","완료"];
-var ISSUE_STATUS_COLOR={"미해결":"#C0392B","진행중":"#BA7517","완료":"#1D9E75"};
+var ISSUE_STATUS_ORDER=["미해결","진행중","보류","완료"];
+var ISSUE_STATUS_COLOR={"미해결":"#C0392B","진행중":"#BA7517","보류":"#7A7F94","완료":"#1D9E75"};
 var ISSUE_TYPE_ICON={"매장요청사항":"ti-clipboard-list","운영이슈 및 개선사항":"ti-alert-triangle"};
+var issueSearchQuery="", issueTypeFilter="", issueGroupMode="status";
+function issueMatchesFilter(is){
+  if(issueTypeFilter && is.type!==issueTypeFilter) return false;
+  if(issueSearchQuery && (is.store||"").indexOf(issueSearchQuery)<0) return false;
+  return true;
+}
+/* 같은 매장·유형 안에서 내용이 비슷한 이슈가 몇 건 더 있는지 계산합니다.
+   자동으로 합치지는 않고, 배지로만 알려줘서 사람이 직접 판단해서 정리할 수 있게 합니다. */
+function computeDupCounts(list){
+  var buckets={};
+  list.forEach(function(is){ var k=(is.store||"")+"||"+(is.type||""); (buckets[k]=buckets[k]||[]).push(is); });
+  var dupCount={};
+  Object.keys(buckets).forEach(function(k){
+    var arr=buckets[k];
+    arr.forEach(function(a){
+      var na=normDedup(a.content||"");
+      var cnt=0;
+      arr.forEach(function(b){
+        if(a===b||!na) return;
+        var nb=normDedup(b.content||"");
+        if(nb&&(na.indexOf(nb)>=0||nb.indexOf(na)>=0)) cnt++;
+      });
+      dupCount[issueRowKey(a.store,a.type,a.content)]=cnt;
+    });
+  });
+  return dupCount;
+}
+function issueRowHTML(is,today,dupCount){
+  var icon=ISSUE_TYPE_ICON[is.type]||"ti-file-text";
+  var dueTxt="";
+  if(is.due && is.status!=="완료"){
+    var overdue=toDate(is.due)<today;
+    dueTxt='<div class="due'+(overdue?' overdue':'')+'">조치예정 '+is.due.m+'/'+is.due.d+(overdue?' · 기한 경과':'')+'</div>';
+  }
+  var noteTxt=is.note?'<div class="issue-note">'+htmlEscape(is.note)+'</div>':"";
+  var pad2=function(n){return String(n).padStart(2,"0");};
+  var resolvedVal=is.resolved?(is.resolved.y+"-"+pad2(is.resolved.m)+"-"+pad2(is.resolved.d)):"";
+  var dateStr=is.y?(is.y+"-"+is.m+"-"+is.d):"";
+  var resolveInput=is.status==="완료"?('<div class="issue-resolve"><label>해결일자</label><input type="date" class="issue-date-input" data-store="'+attrEscape(is.store||"")+'" data-type="'+attrEscape(is.type||"")+'" data-content="'+attrEscape(is.content||"")+'" value="'+resolvedVal+'"></div>'):"";
+  var seg='<div class="fb-seg issue-seg" data-store="'+attrEscape(is.store||"")+'" data-type="'+attrEscape(is.type||"")+'" data-content="'+attrEscape(is.content||"")+'" data-date="'+dateStr+'">'
+    +'<button class="seg-btn'+(is.status==="미해결"?" active bad":"")+'" data-set="미해결">미해결</button>'
+    +'<button class="seg-btn'+(is.status==="진행중"?" active mid":"")+'" data-set="진행중">진행중</button>'
+    +'<button class="seg-btn'+(is.status==="보류"?" active hold":"")+'" data-set="보류">보류</button>'
+    +'<button class="seg-btn'+(is.status==="완료"?" active good":"")+'" data-set="완료">완료</button>'
+    +'</div>';
+  var dupKey=issueRowKey(is.store,is.type,is.content);
+  var dupN=dupCount?(dupCount[dupKey]||0):0;
+  var dupBadge=dupN>0?' <span class="tag" style="background:var(--accent-soft);color:var(--accent-deep);" title="내용이 비슷한 이슈가 더 있어요"><i class="ti ti-copy" style="font-size:10.5px;vertical-align:-1px;"></i> 유사 '+dupN+'건</span>':"";
+  return '<div class="issue-row" data-issue-key="'+attrEscape(dupKey)+'"><i class="ti '+icon+' icon"></i><div class="body">'
+    +'<div class="meta">'+(is.store?'<b style="color:var(--ink);">'+htmlEscape(is.store)+'</b>':'')+(is.type?' · '+htmlEscape(is.type):'')+(is.y?' · '+is.m+'/'+is.d+' 등록':'')+dupBadge+'</div>'
+    +'<div class="txt">'+htmlEscape(is.content)+'</div>'+dueTxt+noteTxt
+    +'</div><div class="issue-right">'+seg+resolveInput+'</div></div>';
+}
 function renderIssuesPage(){
   var today=new Date(TY,TM-1,TD);
-  var counts={"미해결":0,"진행중":0,"완료":0};
-  issues.forEach(function(is){ counts[is.status]=(counts[is.status]||0)+1; });
-  var total=issues.length;
+  var typeSel=document.getElementById("issue-type-filter");
+  if(typeSel){
+    var types=[]; issues.forEach(function(is){ if(is.type&&types.indexOf(is.type)<0) types.push(is.type); });
+    var curVal=issueTypeFilter;
+    typeSel.innerHTML='<option value="">전체 유형</option>'+types.map(function(t){return '<option value="'+attrEscape(t)+'"'+(t===curVal?' selected':'')+'>'+htmlEscape(t)+'</option>';}).join("");
+  }
+  var filtered=issues.filter(issueMatchesFilter);
+  var counts={"미해결":0,"진행중":0,"보류":0,"완료":0};
+  filtered.forEach(function(is){ counts[is.status]=(counts[is.status]||0)+1; });
+  var total=filtered.length;
   document.getElementById("issue-kpis").innerHTML=
-    '<div class="kpi"><div class="lbl">전체 이슈</div><div class="val">'+total+'건</div><div class="sub">이슈트래커 시트 기준</div></div>'
+    '<div class="kpi"><div class="lbl">전체 이슈</div><div class="val">'+total+'건</div><div class="sub">'+(issueSearchQuery||issueTypeFilter?'필터 적용됨':'이슈트래커 시트 기준')+'</div></div>'
     +'<div class="kpi"><div class="lbl">미해결</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["미해결"]+';">'+(counts["미해결"]||0)+'건</div><div class="sub bad">우선 확인 필요</div></div>'
     +'<div class="kpi"><div class="lbl">진행중</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["진행중"]+';">'+(counts["진행중"]||0)+'건</div><div class="sub">조치 진행 중</div></div>'
+    +'<div class="kpi"><div class="lbl">보류</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["보류"]+';">'+(counts["보류"]||0)+'건</div><div class="sub">잠시 보류됨</div></div>'
     +'<div class="kpi"><div class="lbl">완료</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["완료"]+';">'+(counts["완료"]||0)+'건</div><div class="sub">조치 완료</div></div>';
 
   if(!issues.length){
     document.getElementById("issue-list").innerHTML='<p style="font-size:13px;color:var(--ink-3);">아직 등록된 이슈가 없어요. 이슈트래커 시트에 항목을 추가하거나, 매장별 라운딩현황의 피드백 카드에서 "이슈로 복사" 버튼으로 옮겨 붙여넣어보세요.</p>';
     return;
   }
+  if(!filtered.length){
+    document.getElementById("issue-list").innerHTML='<p style="font-size:13px;color:var(--ink-3);">조건에 맞는 이슈가 없어요. 검색어나 필터를 확인해 주세요.</p>';
+    return;
+  }
+  var dupCount=computeDupCounts(filtered);
+
+  if(issueGroupMode==="store"){
+    var byStore={}, storeOrder=[];
+    filtered.forEach(function(is){
+      var k=is.store||"(매장 미지정)";
+      if(!byStore[k]){ byStore[k]=[]; storeOrder.push(k); }
+      byStore[k].push(is);
+    });
+    storeOrder.sort(function(a,b){
+      var ua=byStore[a].filter(function(i){return i.status!=="완료";}).length;
+      var ub=byStore[b].filter(function(i){return i.status!=="완료";}).length;
+      return ub-ua;
+    });
+    document.getElementById("issue-list").innerHTML=storeOrder.map(function(store){
+      var list=byStore[store].slice().sort(function(a,b){
+        var da=a.y?toDate(a):new Date(0), db=b.y?toDate(b):new Date(0);
+        return db-da;
+      });
+      var openCnt=list.filter(function(i){return i.status!=="완료";}).length;
+      return '<div class="issue-grp"><div class="issue-grp-hd"><span class="dot" style="background:var(--accent);"></span>'+htmlEscape(store)+'<span class="cnt">미완료 '+openCnt+'건 · 총 '+list.length+'건</span></div>'
+        +list.map(function(is){ return issueRowHTML(is,today,dupCount); }).join("")
+        +'</div>';
+    }).join("");
+    return;
+  }
+
   document.getElementById("issue-list").innerHTML=ISSUE_STATUS_ORDER.map(function(st){
-    var list=issues.filter(function(is){return is.status===st;}).sort(function(a,b){
+    var list=filtered.filter(function(is){return is.status===st;}).sort(function(a,b){
       var da=a.y?toDate(a):new Date(0), db=b.y?toDate(b):new Date(0);
       return db-da;
     });
     if(!list.length) return "";
     return '<div class="issue-grp"><div class="issue-grp-hd"><span class="dot" style="background:'+ISSUE_STATUS_COLOR[st]+';"></span>'+st+'<span class="cnt">'+list.length+'건</span></div>'
-      +list.map(function(is){
-        var icon=ISSUE_TYPE_ICON[is.type]||"ti-file-text";
-        var dueTxt="";
-        if(is.due && is.status!=="완료"){
-          var overdue=toDate(is.due)<today;
-          dueTxt='<div class="due'+(overdue?' overdue':'')+'">조치예정 '+is.due.m+'/'+is.due.d+(overdue?' · 기한 경과':'')+'</div>';
-        }
-        var noteTxt=is.note?'<div class="issue-note">'+htmlEscape(is.note)+'</div>':"";
-        var pad2=function(n){return String(n).padStart(2,"0");};
-        var resolvedVal=is.resolved?(is.resolved.y+"-"+pad2(is.resolved.m)+"-"+pad2(is.resolved.d)):"";
-        var dateStr=is.y?(is.y+"-"+is.m+"-"+is.d):"";
-        var resolveInput=is.status==="완료"?('<div class="issue-resolve"><label>해결일자</label><input type="date" class="issue-date-input" data-store="'+attrEscape(is.store||"")+'" data-type="'+attrEscape(is.type||"")+'" data-content="'+attrEscape(is.content||"")+'" value="'+resolvedVal+'"></div>'):"";
-        var seg='<div class="fb-seg issue-seg" data-store="'+attrEscape(is.store||"")+'" data-type="'+attrEscape(is.type||"")+'" data-content="'+attrEscape(is.content||"")+'" data-date="'+dateStr+'">'
-          +'<button class="seg-btn'+(is.status==="미해결"?" active bad":"")+'" data-set="미해결">미해결</button>'
-          +'<button class="seg-btn'+(is.status==="진행중"?" active mid":"")+'" data-set="진행중">진행중</button>'
-          +'<button class="seg-btn'+(is.status==="완료"?" active good":"")+'" data-set="완료">완료</button>'
-          +'</div>';
-        return '<div class="issue-row" data-issue-key="'+attrEscape(issueRowKey(is.store,is.type,is.content))+'"><i class="ti '+icon+' icon"></i><div class="body">'
-          +'<div class="meta">'+(is.store?'<b style="color:var(--ink);">'+htmlEscape(is.store)+'</b>':'')+(is.type?' · '+htmlEscape(is.type):'')+(is.y?' · '+is.m+'/'+is.d+' 등록':'')+'</div>'
-          +'<div class="txt">'+htmlEscape(is.content)+'</div>'+dueTxt+noteTxt
-          +'</div><div class="issue-right">'+seg+resolveInput+'</div></div>';
-      }).join("")
+      +list.map(function(is){ return issueRowHTML(is,today,dupCount); }).join("")
       +'</div>';
   }).join("");
 }
@@ -1615,10 +1700,21 @@ function switchToTab(page){
   document.getElementById("page-interior").style.display=(page==="interior")?"":"none";
 }
 
+document.addEventListener("input",function(e){
+  if(e.target && e.target.id==="issue-search"){
+    issueSearchQuery=e.target.value.trim();
+    renderIssuesPage();
+  }
+});
 document.addEventListener("change",function(e){
   var dateInput=e.target.closest(".issue-date-input");
   if(dateInput){
     setIssueField(dateInput.getAttribute("data-store"),dateInput.getAttribute("data-type"),dateInput.getAttribute("data-content"),"해결일자",dateInput.value);
+    return;
+  }
+  if(e.target && e.target.id==="issue-type-filter"){
+    issueTypeFilter=e.target.value;
+    renderIssuesPage();
   }
 });
 document.addEventListener("click",function(e){
@@ -1697,6 +1793,13 @@ document.addEventListener("click",function(e){
     renderStores();
     return;
   }
+  var groupModeBtn=e.target.closest("#issue-group-mode .seg-btn");
+  if(groupModeBtn){
+    document.querySelectorAll("#issue-group-mode .seg-btn").forEach(function(b){ b.classList.toggle("active",b===groupModeBtn); b.classList.toggle("sel",b===groupModeBtn); });
+    issueGroupMode=groupModeBtn.getAttribute("data-mode");
+    renderIssuesPage();
+    return;
+  }
   var segBtn=e.target.closest(".seg-btn");
   if(segBtn){
     var wrap=segBtn.closest(".fb-seg");
@@ -1706,6 +1809,7 @@ document.addEventListener("click",function(e){
       b.classList.toggle("active",on);
       b.classList.toggle("bad",on&&status==="미해결");
       b.classList.toggle("mid",on&&status==="진행중");
+      b.classList.toggle("hold",on&&status==="보류");
       b.classList.toggle("good",on&&status==="완료");
     });
     setIssueStatus(wrap.getAttribute("data-store"),wrap.getAttribute("data-type"),wrap.getAttribute("data-content"),wrap.getAttribute("data-date"),status);
