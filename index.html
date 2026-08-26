@@ -1397,10 +1397,17 @@ function extractIssueItems(chunk){
   var items=matched.length?matched:(sentences.length?[sentences[0]]:[]);
   return items.map(function(s){ return {detail:s+".", label:shortLabel(s)}; });
 }
+/* 항목별 컬럼(신버전) 보고서는 그 칸에 적힌 내용 전부가 이미 요청/이슈이므로,
+   키워드 필터 없이 줄 단위로 전부 항목화합니다. */
+function extractAllItems(chunk){
+  var sentences=dedupeSentences(splitSentences(chunk));
+  return sentences.map(function(s){ return {detail:s+".", label:shortLabel(s)}; });
+}
 /* AI 라벨(폼 제출시 Apps Script가 Claude로 미리 생성)이 있으면 그걸 쓰고,
-   없으면 기존 정규식 기반 추출로 자동 대체합니다. */
+   구조화된 보고서면 줄 단위 전체 추출, 그 외(구버전 통합 텍스트)는 키워드 필터로 자동 대체합니다. */
 function getSectionItems(report,label,rawText){
   if(report && report.aiLabels && report.aiLabels[label] && report.aiLabels[label].length) return report.aiLabels[label];
+  if(report && report.structured) return extractAllItems(rawText);
   return extractIssueItems(rawText);
 }
 
