@@ -1369,18 +1369,32 @@ function shortLabel(sentence){
   if(colonIdx>0 && colonIdx<20){ s=s.slice(colonIdx+1).trim(); }
   /* 의미 없는 접속어로 시작하면 제거 */
   s=s.replace(/^(또한|그리고|추가로|아울러|그래서|이외에도|그밖에)\s*/,"");
-  var LIMIT=24;
+
+  var GOOD_END=/(이슈|문제|사항|요청|필요|희망|완료|확대|추가|보강|강화|개선|보수|지원|교체|반영|설치|정비|보완)(이|가|를|은|는|도)?$/;
+  var endsWell=GOOD_END.test(s);
+  var LIMIT=28;
+
   if(s.length>LIMIT){
-    var cut=s.slice(0,LIMIT);
-    /* 괄호가 안 닫힌 채로 잘리면 여는 괄호 앞까지만 사용해서 어색한 절단 방지 */
-    var openParen=cut.lastIndexOf("(");
-    var closeParen=cut.lastIndexOf(")");
-    if(openParen>closeParen && openParen>4){ cut=cut.slice(0,openParen); }
-    var lastSpace=cut.lastIndexOf(" ");
-    if(lastSpace>6) cut=cut.slice(0,lastSpace);
-    s=cut.trim();
+    if(endsWell){
+      /* 원문의 결론(요청/필요 등)은 그대로 살리고, 앞부분만 줄여서 "...핵심 요청" 형태로 유지 */
+      var tailLen=18;
+      var tail=s.slice(-tailLen).trim();
+      var head=s.slice(0,LIMIT-tailLen-1);
+      var hSpace=head.lastIndexOf(" ");
+      if(hSpace>4) head=head.slice(0,hSpace);
+      s=head.trim()+"…"+tail;
+    }else{
+      var cut=s.slice(0,LIMIT);
+      /* 괄호가 안 닫힌 채로 잘리면 여는 괄호 앞까지만 사용해서 어색한 절단 방지 */
+      var openParen=cut.lastIndexOf("(");
+      var closeParen=cut.lastIndexOf(")");
+      if(openParen>closeParen && openParen>4){ cut=cut.slice(0,openParen); }
+      var lastSpace=cut.lastIndexOf(" ");
+      if(lastSpace>6) cut=cut.slice(0,lastSpace);
+      s=cut.trim();
+    }
   }
-  if(!/(이슈|문제|사항|요청|필요|희망|완료)(이|가|를|은|는|도)?$/.test(s)) s+=" 이슈";
+  if(!GOOD_END.test(s)) s+=" 이슈";
   return s;
 }
 function stripLeadBullet(line){
