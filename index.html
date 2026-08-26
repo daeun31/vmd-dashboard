@@ -1370,19 +1370,19 @@ function shortLabel(sentence){
   /* 의미 없는 접속어로 시작하면 제거 */
   s=s.replace(/^(또한|그리고|추가로|아울러|그래서|이외에도|그밖에)\s*/,"");
 
-  var GOOD_END=/(이슈|문제|사항|요청|필요|희망|완료|확대|추가|보강|강화|개선|보수|지원|교체|반영|설치|정비|보완)(이|가|를|은|는|도)?$/;
+  var GOOD_END=/(이슈|문제|사항|요청|필요|희망|완료|확대|추가|보강|강화|개선|보수|지원|교체|반영|설치|정비|보완|오류|불일치|잦음|미비|저조|우려|요구|발생|지적|누락|지연)(이|가|를|은|는|도)?$/;
   var endsWell=GOOD_END.test(s);
   var LIMIT=28;
 
   if(s.length>LIMIT){
     if(endsWell){
-      /* 원문의 결론(요청/필요 등)은 그대로 살리고, 앞부분만 줄여서 "...핵심 요청" 형태로 유지 */
+      /* 원문의 결론(요청/필요/오류 등)은 그대로 살리고, 앞부분만 줄여서 이어붙임 */
       var tailLen=18;
       var tail=s.slice(-tailLen).trim();
-      var head=s.slice(0,LIMIT-tailLen-1);
+      var head=s.slice(0,LIMIT-tailLen);
       var hSpace=head.lastIndexOf(" ");
       if(hSpace>4) head=head.slice(0,hSpace);
-      s=head.trim()+"…"+tail;
+      s=(head.trim()+" "+tail).trim();
     }else{
       var cut=s.slice(0,LIMIT);
       /* 괄호가 안 닫힌 채로 잘리면 여는 괄호 앞까지만 사용해서 어색한 절단 방지 */
