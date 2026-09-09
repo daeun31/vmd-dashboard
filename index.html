@@ -723,6 +723,7 @@ function syncIssuesFromReports(){
       if(s.label!=="매장 요청사항"&&s.label!=="운영이슈 및 개선사항") return;
       getSectionItems(ev._report,s.label,s.raw).forEach(function(it){
         if(ISSUE_EXCLUDE.test(it.label)||ISSUE_EXCLUDE.test(it.detail)) return;
+        if(!isTrackableForOps(s.label,it.label)) return;
         registerIssue(ev.t,s.label,it.label,ev);
       });
     });
@@ -1362,6 +1363,14 @@ function getFeedback(rep){
 var ISSUE_KEY=/시급|필요|요청|희망|강화|개선|부족|고장|훼손|반영|보수|지원|권장|튿어|찢어|파손|오염|불량|분실|누수|손상|미흡|불편/;
 /* 인원/인력 관련 내용은 매장 피드백 카드엔 그대로 보이되, 이슈트래커에는 등록하지 않습니다. */
 var ISSUE_EXCLUDE=/인원|인력|재고/;
+/* 운영이슈 및 개선사항은 "~필요/~요청"으로 끝나는(=실제 조치가 필요한) 항목만
+   이슈트래커에 남기고, "~상태"처럼 단순 현황 서술은 트래커에는 안 남깁니다.
+   (매장 피드백 카드에는 그대로 다 보여요) */
+var OPS_TRACKABLE_END=/(필요|요청)(이|가|를|은|는|도)?$/;
+function isTrackableForOps(sectionLabel,content){
+  if(sectionLabel!=="운영이슈 및 개선사항") return true;
+  return OPS_TRACKABLE_END.test((content||"").trim());
+}
 function shortLabel(sentence){
   var s=sentence.trim().replace(/\.$/,"");
   /* 콜론 앞의 카테고리명(예: "집기 및 인테리어:")은 라벨에서 제외하고 실제 내용부터 사용 */
@@ -1477,7 +1486,7 @@ function showVisitDetail(key){
         if(isActionable){
           var items=getSectionItems(rep,s.label,s.raw);
           var itemsHtml=items.map(function(it){
-            var excluded=ISSUE_EXCLUDE.test(it.label)||ISSUE_EXCLUDE.test(it.detail);
+            var excluded=ISSUE_EXCLUDE.test(it.label)||ISSUE_EXCLUDE.test(it.detail)||!isTrackableForOps(s.label,it.label);
             if(!excluded) registerIssue(e.t,s.label,it.label,e);
             var statusHtml="";
             if(!excluded){
@@ -1575,6 +1584,7 @@ var ISSUE_TYPE_ICON={"매장요청사항":"ti-clipboard-list","운영이슈 및 
 var issueSearchQuery="", issueTypeFilter="", issueGroupMode="status";
 function issueMatchesFilter(is){
   if(ISSUE_EXCLUDE.test(is.content||"")) return false;
+  if(!isTrackableForOps(is.type,is.content)) return false;
   if(issueTypeFilter && is.type!==issueTypeFilter) return false;
   if(issueSearchQuery && (is.store||"").indexOf(issueSearchQuery)<0) return false;
   return true;
