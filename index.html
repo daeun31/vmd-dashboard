@@ -1385,13 +1385,25 @@ function shortLabel(sentence){
 
   if(s.length>LIMIT){
     if(endsWell){
-      /* 원문의 결론(요청/필요/오류 등)은 그대로 살리고, 앞부분만 줄여서 이어붙임 */
-      var tailLen=18;
-      var tail=s.slice(-tailLen).trim();
-      var head=s.slice(0,LIMIT-tailLen);
-      var hSpace=head.lastIndexOf(" ");
-      if(hSpace>4) head=head.slice(0,hSpace);
-      s=(head.trim()+" "+tail).trim();
+      /* 원문의 결론(요청/필요/오류 등)은 그대로 살리되, 반드시 "단어" 단위로만 잘라서
+         "발견되어"가 "견되어"처럼 글자 중간이 잘리는 일이 없게 합니다. */
+      var words=s.split(/\s+/).filter(Boolean);
+      var tailWords=[], tailLen=0;
+      for(var i=words.length-1;i>=0;i--){
+        tailLen+=words[i].length+1;
+        tailWords.unshift(words[i]);
+        if(tailLen>=16) break;
+      }
+      var tail=tailWords.join(" ");
+      var headWords=words.slice(0,words.length-tailWords.length);
+      var hLimit=Math.max(LIMIT-tail.length-1,0);
+      var head="";
+      for(var j=0;j<headWords.length;j++){
+        var next=head?head+" "+headWords[j]:headWords[j];
+        if(next.length>hLimit) break;
+        head=next;
+      }
+      s=(head?head+" ":"")+tail;
     }else{
       var cut=s.slice(0,LIMIT);
       /* 괄호가 안 닫힌 채로 잘리면 여는 괄호 앞까지만 사용해서 어색한 절단 방지 */
