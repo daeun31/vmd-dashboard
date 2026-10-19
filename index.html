@@ -351,7 +351,7 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
       </div>
     </div>
     <div class="stores" id="stores"></div>
-    <p style="font-size:12px;color:var(--ink-3);margin-top:10px;" id="stores-note">마지막 완료 방문일 · 경과일(60일↑ 노랑, 90일↑ 빨강) · 예정일(핑크) · 경과가 긴 매장 순으로 정렬</p>
+    <p style="font-size:12px;color:var(--ink-3);margin-top:10px;" id="stores-note">마지막 완료 방문일 · 경과일(2개월↑만 표시, 90일↑ 빨강) · 예정일(핑크) · 경과가 긴 매장 순으로 정렬</p>
   </section>
 </div>
 
@@ -1113,7 +1113,7 @@ function storeRowHTML(nm){
   var big, sub=[];
   if(!f.last){ big='<span class="dd none">기록 없음</span>'; lv="bad"; }
   else{
-    big='<span class="dd">'+(f.days===0?'오늘':f.days+'<small>일 경과</small>')+'</span>';
+    big=f.days>=60?'<span class="dd">'+f.days+'<small>일 경과</small></span>':'';
     sub.push('<span class="ml">마지막 '+f.last.m+'/'+f.last.d+'</span>');
   }
   sub.push(f.next?'<span class="mn">예정 '+f.next.m+'/'+f.next.d+'</span>':'<span class="mx">예정 없음</span>');
