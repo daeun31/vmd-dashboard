@@ -17,6 +17,13 @@ var REPORTS_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLFIrSa
 var ISSUES_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLFIrSatd-0vtueexT2y4uZQf4O1icT8EXm5JT7DhP91DK7bPbRlRCNJrE_VlnTBStx5xfXvrsu74I/pub?gid=465377158&single=true&output=csv";   /* 이슈트래커 시트 CSV 주소 (선택). 열 구성: 등록일 | 매장명 | 구분 | 내용 | 상태 | 조치예정일 */
 var ISSUE_UPDATE_URL = "https://script.google.com/macros/s/AKfycbyHimUg704plGR6IXjHqFjFC6IuEmRf_SF6zxX-i7iaEJvY9xeFwTMfffBni8LIHevs/exec";   /* 이슈 상태를 시트에 저장하는 Apps Script 웹앱 URL (선택, 비우면 화면에서만 임시로 반영됩니다) */
 var INTERIOR_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBwhOpIFBkqqZ5MNfh9hHOCjRlb7E2L2wZ5Y5biQmAZolWIzKnArYbZk-jDP4d5Z1T53AJVs7g/pub?gid=635722124&single=true&output=csv";   /* 매장인테리어 시트 CSV 주소 (선택) */
+/* 라운딩 보고서 구글폼 (매장명·방문일 자동입력) */
+var REPORT_FORM_URL="https://docs.google.com/forms/d/e/1FAIpQLSd6DdvlSQ07APtKc6uoAEiZleDT14xgNWR96yzSQDlok0idow/viewform";
+var FORM_ENTRY_STORE="entry.714923218", FORM_ENTRY_DATE="entry.628037313";
+function reportFormLink(e){
+  function z(n){ return (n<10?"0":"")+n; }
+  return REPORT_FORM_URL+"?usp=pp_url&"+FORM_ENTRY_STORE+"="+encodeURIComponent(e.t)+"&"+FORM_ENTRY_DATE+"="+e.y+"-"+z(e.m)+"-"+z(e.d);
+}
 </script>
 <style>
 :root{
@@ -1455,7 +1462,7 @@ function showVisitDetail(key){
   var rep=e._report;
   var reportBtn=(rep&&rep.link)
     ?'<a class="ss-report-btn" href="'+rep.link+'" target="_blank" rel="noopener"><i class="ti ti-file-text"></i>보고서</a>'
-    :'<span class="ss-report-btn disabled"><i class="ti ti-file-off"></i>보고서 없음</span>';
+    :'<a class="ss-report-btn" href="'+reportFormLink(e)+'" target="_blank" rel="noopener"><i class="ti ti-pencil-plus"></i>보고서 작성</a>';
 
   var html='<div class="ss-store-hd"><i class="ti '+(TYPE_ICON[t]||'ti-building-store')+'"></i><h2>'+e.t+'</h2></div>'
     +'<div class="ss-date-section">'
