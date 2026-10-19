@@ -101,6 +101,14 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .store{display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:1px solid var(--line);font-size:12.5px;}
 .store .no{color:var(--ink-3);font-size:11.5px;min-width:20px;}
 .store .nm{flex:1;}
+.store-q{flex-wrap:wrap;row-gap:4px;}
+.mchips{display:inline-flex;gap:4px;}
+.mchip{font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;border:1px solid var(--line);color:var(--ink-3);background:#fff;min-width:38px;text-align:center;}
+.mchip.done{background:var(--green-soft);color:var(--green-deep);border-color:transparent;}
+.mchip.plan{background:var(--pink-soft);color:var(--pink-deep);border-color:transparent;}
+.mchip.miss{background:var(--red-soft);color:var(--red-deep);border-color:transparent;}
+.elap{font-size:11px;font-weight:600;color:var(--ink-2);min-width:62px;text-align:right;}
+.elap.ok{color:var(--green-deep);}.elap.warn{color:var(--amber-deep);}.elap.bad{color:var(--red);}
 .store-grp{margin-bottom:20px;}
 .store-grp:last-child{margin-bottom:0;}
 .store-grp-hd{display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:2px solid var(--ink);margin-bottom:8px;}
@@ -336,7 +344,7 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
       </div>
     </div>
     <div class="stores" id="stores"></div>
-    <p style="font-size:12px;color:var(--ink-3);margin-top:10px;" id="stores-note">일정 시트에 등록된 전체 기간 기준 · 완료/예정은 오늘 날짜로 자동 계산</p>
+    <p style="font-size:12px;color:var(--ink-3);margin-top:10px;" id="stores-note">분기 3개월별 방문일 (초록=완료 · 핑크=예정 · 빨강=미완료 · 회색=계획 없음) · 우측은 마지막 완료 방문 이후 경과 개월</p>
   </section>
 </div>
 
@@ -1080,6 +1088,30 @@ function statusTagHTML(v,withDate){
   return '<span class="tag plan">'+(withDate?v.m+'/'+v.d+' ':'')+'예정</span>';
 }
 
+
+/* 분기 3개월별 방문 칩 + 마지막 방문 이후 경과 개월 */
+function monthChipsHTML(nm){
+  var qml=quarterStats.qml||[];
+  return '<span class="mchips">'+qml.map(function(p){
+    var vs=schedule.filter(function(e){return e.t===nm&&e.y===p.y&&e.m===p.m;});
+    var cls="none", txt=p.m+"월";
+    if(vs.length){
+      var v=vs[vs.length-1];
+      cls=isDone(v)?"done":(isMissing(v)?"miss":"plan");
+      txt=p.m+"/"+v.d;
+    }
+    return '<span class="mchip '+cls+'">'+txt+'</span>';
+  }).join("")+'</span>';
+}
+function elapsedTagHTML(nm){
+  var last=null;
+  schedule.forEach(function(e){ if(e.t===nm && isDone(e) && (!last||toDate(e)>toDate(last))) last=e; });
+  if(!last) return '<span class="elap warn">기록 없음</span>';
+  var n=(TY*12+TM)-(last.y*12+last.m);
+  if(n<=0) return '<span class="elap ok">이번 달 방문</span>';
+  return '<span class="elap '+(n>=3?'bad':(n===2?'warn':''))+'">'+n+'개월 경과</span>';
+}
+
 var coverageFilter="all";
 function renderStores(){
   var unvisitedSet={}; quarterStats.neverVisited.forEach(function(nm){ unvisitedSet[nm]=true; });
@@ -1100,7 +1132,7 @@ function renderStores(){
     var list=grp[t];
     var doneCnt=list.filter(function(nm){var v=latestVisit(nm);return v&&isDone(v);}).length;
     var rows=list.map(function(nm){
-      return '<div class="store"><span class="nm">'+nm+'</span>'+statusTagHTML(latestVisit(nm),true)+'</div>';
+      return '<div class="store store-q"><span class="nm">'+nm+'</span>'+monthChipsHTML(nm)+elapsedTagHTML(nm)+'</div>';
     }).join("");
     return '<div class="store-grp"><div class="store-grp-hd"><span class="ttl"><i class="ti '+(TYPE_ICON[t]||'ti-building-store')+'"></i>'+t+'</span>'
       +'<span class="cnt"><b>'+doneCnt+'</b> / '+list.length+' 완료</span></div>'
