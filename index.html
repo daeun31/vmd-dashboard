@@ -340,6 +340,15 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
 .wl-day.mini .wl-chk{width:15px;height:15px;font-size:10px;border-radius:4px;}
 .wl-day.mini .wl-dot{width:6px;height:6px;margin-top:6px;}
 @media (max-width:900px){.wl-mgrid.c5,.wl-mgrid.c7{grid-template-columns:1fr;}.wl-mh,.wl-mblank{display:none;}.wl-day.mini{min-height:0;}}
+.wl-leg{display:inline-flex;gap:10px;font-size:12px;color:var(--ink-2);}
+.wl-leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;}
+button.wl-dot{border:none;padding:0;cursor:pointer;width:10px;height:10px;margin-top:5px;box-shadow:0 0 0 3px transparent;}
+button.wl-dot:hover{box-shadow:0 0 0 3px rgba(0,0,0,.08);}
+.wl-day.mini button.wl-dot{width:8px;height:8px;margin-top:4px;}
+.wl-late{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--red-soft);color:var(--red-deep);border-radius:var(--radius);padding:9px 12px;font-size:12.5px;margin-bottom:12px;}
+.wl-late button{font-family:inherit;font-size:12px;font-weight:700;color:#fff;background:var(--red);border:none;border-radius:999px;padding:5px 12px;cursor:pointer;}
+.wl-mv{flex:none;border:none;background:transparent;color:var(--ink-3);cursor:pointer;font-size:13px;line-height:1;padding:0 2px;opacity:.5;}
+.wl-mv:hover{color:var(--accent);opacity:1;}
 </style>
 </head>
 <body>
@@ -1904,14 +1913,15 @@ function showInteriorDetail(nm){
 
 /* ===================== 업무일지 ===================== */
 var WL_WHO=[{k:"다은",c:"#3F9E76"},{k:"민지",c:"#E0A526"},{k:"공동",c:"#D65C82"}];
-var wl={view:(window.innerWidth>900?"month":"week"),month:{y:TY,m:TM},items:[],monday:null,filter:"전체",who:"공동",editing:null,loaded:false,error:false,timer:null};
-try{ var _w=localStorage.getItem("wl-who"); if(_w) wl.who=_w; var _v=localStorage.getItem("wl-view"); if(_v) wl.view=_v; }catch(e){}
+var wl={who:"공동",view:(window.innerWidth>900?"month":"week"),month:{y:TY,m:TM},items:[],monday:null,filter:"전체",who:"공동",editing:null,loaded:false,error:false,timer:null};
+try{ var _v=localStorage.getItem("wl-view"); if(_v) wl.view=_v; }catch(e){}
 
 function wlEsc(s){ return htmlEscape(String(s==null?"":s)).replace(/"/g,"&quot;"); }
 function wlPad(n){ return (n<10?"0":"")+n; }
 function wlFmt(d){ return d.getFullYear()+"-"+wlPad(d.getMonth()+1)+"-"+wlPad(d.getDate()); }
 function wlMondayOf(d){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); var wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; }
 function wlColor(w){ var f=WL_WHO.find(function(o){return o.k===w;}); return f?f.c:"#9B9B9B"; }
+function wlNextBizDay(ds){ var p=ds.split("-"); var d=new Date(+p[0],+p[1]-1,+p[2]+1); while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()+1); return wlFmt(d); }
 function wlNewId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
 function wlSend(it){
@@ -1939,7 +1949,7 @@ function wlDayHTML(d,vis,todayStr,withMemo){
     var txt=(wl.editing===t.id)
       ?'<input class="wl-edit" data-edit="'+t.id+'" value="'+wlEsc(t.text)+'">'
       :'<span class="wl-txt" data-wl-edit="'+t.id+'">'+wlEsc(t.text)+'</span>';
-    return '<div class="wl-item'+(t.done?' done':'')+'"><button class="wl-chk" data-wl-chk="'+t.id+'" aria-label="완료">'+(t.done?'✓':'')+'</button><span class="wl-dot" style="background:'+wlColor(t.who)+'"></span>'+txt+'<button class="wl-del" data-wl-del="'+t.id+'" aria-label="삭제">×</button></div>';
+    return '<div class="wl-item'+(t.done?' done':'')+'"><button class="wl-chk" data-wl-chk="'+t.id+'" aria-label="완료">'+(t.done?'✓':'')+'</button><button class="wl-dot" data-wl-cycle="'+t.id+'" title="담당: '+(t.who||'공동')+' (눌러서 변경)" style="background:'+wlColor(t.who||'공동')+'"></button>'+txt+(t.done?'':'<button class="wl-mv" data-wl-next="'+t.id+'" title="다음 영업일로 미루기">→</button>')+'<button class="wl-del" data-wl-del="'+t.id+'" aria-label="삭제">×</button></div>';
   }).join("");
   if(!body && withMemo) body='<div class="wl-empty">업무 없음</div>';
   var label=(wl.view==="month")?d.getDate()+' <small>('+WD_KR[d.getDay()]+')</small>':d.getDate()+' ('+WD_KR[d.getDay()]+')';
@@ -1994,9 +2004,11 @@ function renderWorklog(){
   var h='';
   if(!WORKLOG_URL) h+='<div class="wl-warn"><b>미리보기 모드</b> · 아직 시트와 연결되지 않아 새로고침하면 입력한 내용이 사라져요.</div>';
   else if(wl.error) h+='<div class="wl-warn">시트에서 불러오지 못했어요. 인터넷 연결이나 웹앱 배포 설정(액세스: 모든 사용자)을 확인해 주세요.</div>';
+  var overdue=wl.items.filter(function(it){return it.kind==="업무"&&!it.done&&it.date<todayStr;});
+  if(overdue.length) h+='<div class="wl-late"><span>지난 날짜에 <b>미완료 '+overdue.length+'건</b>이 남아 있어요.</span><button data-wl-sweep="1">모두 오늘로 이동</button></div>';
   h+='<div class="wl-bar"><div class="wl-seg"><button class="wl-chip'+(isMonth?'':' on')+'" data-wl-view="week">주간</button><button class="wl-chip'+(isMonth?' on':'')+'" data-wl-view="month">월간</button></div>'
     +'<div class="wl-nav"><button data-wl="prev">◀</button><span class="wl-range">'+title+(isCur?(isMonth?' · 이번 달':' · 이번 주'):'')+'</span><button data-wl="next">▶</button>'+(isCur?'':'<button data-wl="today">'+(isMonth?'이번 달':'이번 주')+'</button>')+'<button data-wl="refresh" title="새로고침">↻</button></div></div>';
-  h+='<div class="wl-bar"><span class="wl-lbl">새 업무 담당</span><span class="wl-who">'+WL_WHO.map(function(o){return '<button class="wl-whob'+(wl.who===o.k?' on':'')+'" data-wl-who="'+o.k+'"><i style="background:'+o.c+'"></i>'+o.k+'</button>';}).join("")+'</span>'
+  h+='<div class="wl-bar"><span class="wl-lbl">기본은 공동 업무 · 업무 앞 점을 누르면 담당 변경</span><span class="wl-leg">'+WL_WHO.map(function(o){return '<span><i style="background:'+o.c+'"></i>'+o.k+'</span>';}).join("")+'</span>'
     +'<div class="wl-chips"><span class="wl-lbl">보기</span>'+["전체","다은","민지","공동"].map(function(k){return '<button class="wl-chip'+(wl.filter===k?' on':'')+'" data-wl-filter="'+k+'">'+k+'</button>';}).join("")+'</div></div>';
   h+='<div class="wl-prog"><span><b style="color:var(--ink);">'+doneN+'</b> / '+shown.length+' 완료 ('+pct+'%)</span><div class="bar"><span style="width:'+pct+'%"></span></div></div>';
   root.innerHTML=h+cells;
@@ -2017,7 +2029,7 @@ function wlDelete(id){
 
 document.addEventListener("click",function(e){
   var root=document.getElementById("wl-root"); if(!root||!root.contains(e.target)) return;
-  var t=e.target.closest("[data-wl],[data-wl-filter],[data-wl-chk],[data-wl-del],[data-wl-edit],[data-wl-who],[data-wl-view]"); if(!t) return;
+  var t=e.target.closest("[data-wl],[data-wl-filter],[data-wl-chk],[data-wl-del],[data-wl-edit],[data-wl-cycle],[data-wl-view],[data-wl-next],[data-wl-sweep]"); if(!t) return;
   if(t.hasAttribute("data-wl")){
     var a=t.getAttribute("data-wl");
     var mo=(wl.view==="month");
@@ -2029,7 +2041,21 @@ document.addEventListener("click",function(e){
   }
   if(t.hasAttribute("data-wl-view")){ wl.view=t.getAttribute("data-wl-view"); try{localStorage.setItem("wl-view",wl.view);}catch(x){} renderWorklog(); return; }
   if(t.hasAttribute("data-wl-filter")){ wl.filter=t.getAttribute("data-wl-filter"); renderWorklog(); return; }
-  if(t.hasAttribute("data-wl-who")){ wl.who=t.getAttribute("data-wl-who"); try{localStorage.setItem("wl-who",wl.who);}catch(x){} renderWorklog(); return; }
+  if(t.hasAttribute("data-wl-next")){
+    var ni=wl.items.find(function(x){return x.id===t.getAttribute("data-wl-next");});
+    if(ni){ ni.date=wlNextBizDay(ni.date); ni.order=Date.now(); wlSend(ni); renderWorklog(); }
+    return;
+  }
+  if(t.hasAttribute("data-wl-sweep")){
+    var td=TY+"-"+wlPad(TM)+"-"+wlPad(TD), base=Date.now(), n=0;
+    wl.items.forEach(function(x){ if(x.kind==="업무"&&!x.done&&x.date<td){ x.date=td; x.order=base+(n++); wlSend(x); } });
+    renderWorklog(); return;
+  }
+  if(t.hasAttribute("data-wl-cycle")){
+    var ci=wl.items.find(function(x){return x.id===t.getAttribute("data-wl-cycle");});
+    if(ci){ var ord=["공동","다은","민지"], cw=ci.who||"공동"; ci.who=ord[(ord.indexOf(cw)+1)%3]; wlSend(ci); renderWorklog(); }
+    return;
+  }
   if(t.hasAttribute("data-wl-chk")){
     var it=wl.items.find(function(x){return x.id===t.getAttribute("data-wl-chk");});
     if(it){ it.done=!it.done; it.doneDate=it.done?(TY+"-"+wlPad(TM)+"-"+wlPad(TD)):""; wlSend(it); renderWorklog(); }
@@ -2042,7 +2068,7 @@ document.addEventListener("keydown",function(e){
   var el=e.target;
   if(el.classList&&el.classList.contains("wl-add-in")&&e.key==="Enter"&&!e.isComposing){
     var v=el.value.trim(); if(!v) return;
-    var it={id:wlNewId(),date:el.getAttribute("data-add"),kind:"업무",who:wl.who,text:v,done:false,doneDate:"",order:Date.now()};
+    var it={id:wlNewId(),date:el.getAttribute("data-add"),kind:"업무",who:"공동",text:v,done:false,doneDate:"",order:Date.now()};
     wl.items.push(it); wlSend(it);
     renderWorklog();
     var again=document.querySelector('.wl-add-in[data-add="'+it.date+'"]'); if(again) again.focus();
