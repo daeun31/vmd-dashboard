@@ -16,6 +16,8 @@ var STORES_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBw
 var REPORTS_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLFIrSatd-0vtueexT2y4uZQf4O1icT8EXm5JT7DhP91DK7bPbRlRCNJrE_VlnTBStx5xfXvrsu74I/pub?gid=2118325494&single=true&output=csv";   /* 라운딩 보고서 제출현황 시트 CSV 주소 (선택, 구글폼 응답 시트를 웹에 게시해서 연결. 비워두면 이전처럼 날짜 경과만으로 완료 표시) */
 var ISSUES_CSV_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSLFIrSatd-0vtueexT2y4uZQf4O1icT8EXm5JT7DhP91DK7bPbRlRCNJrE_VlnTBStx5xfXvrsu74I/pub?gid=465377158&single=true&output=csv";   /* 이슈트래커 시트 CSV 주소 (선택). 열 구성: 등록일 | 매장명 | 구분 | 내용 | 상태 | 조치예정일 */
 var ISSUE_UPDATE_URL = "https://script.google.com/macros/s/AKfycbyHimUg704plGR6IXjHqFjFC6IuEmRf_SF6zxX-i7iaEJvY9xeFwTMfffBni8LIHevs/exec";   /* 이슈 상태를 시트에 저장하는 Apps Script 웹앱 URL (선택, 비우면 화면에서만 임시로 반영됩니다) */
+/* 업무일지 Apps Script 웹앱 URL (worklog-script.gs 배포 후 붙여넣기) */
+var WORKLOG_URL = "";
 var INTERIOR_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSh97mBwhOpIFBkqqZ5MNfh9hHOCjRlb7E2L2wZ5Y5biQmAZolWIzKnArYbZk-jDP4d5Z1T53AJVs7g/pub?gid=635722124&single=true&output=csv";   /* 매장인테리어 시트 CSV 주소 (선택) */
 /* 라운딩 보고서 구글폼 (매장명·방문일 자동입력) */
 var REPORT_FORM_URL="https://docs.google.com/forms/d/e/1FAIpQLSd6DdvlSQ07APtKc6uoAEiZleDT14xgNWR96yzSQDlok0idow/viewform";
@@ -282,6 +284,44 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .fb-main-val.empty{color:var(--ink-3);font-weight:500;}
 .fb-toggle{background:transparent;border:1px solid var(--line);border-radius:8px;font-size:12px;font-weight:600;color:var(--ink-2);padding:6px 12px;cursor:pointer;margin-top:4px;}
 footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
+
+/* ===== 업무일지 ===== */
+.wl-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.wl-nav{display:inline-flex;align-items:center;gap:6px;}
+.wl-nav button,.wl-chip{font-family:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;}
+.wl-nav button:hover,.wl-chip:hover{background:var(--accent-soft);color:var(--ink);}
+.wl-range{font-size:14px;font-weight:700;color:var(--ink);padding:0 4px;}
+.wl-chip.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+.wl-chips{display:inline-flex;gap:6px;margin-left:auto;flex-wrap:wrap;}
+.wl-prog{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:12.5px;color:var(--ink-2);}
+.wl-prog .bar{flex:1;max-width:320px;margin-top:0;}
+.wl-warn{background:var(--amber-soft);color:var(--amber-deep);border-radius:var(--radius);padding:10px 12px;font-size:12.5px;margin-bottom:12px;line-height:1.5;}
+.wl-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:start;}
+@media (max-width:900px){.wl-grid{grid-template-columns:1fr;}}
+.wl-day{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:10px 10px 12px;}
+.wl-day.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);}
+.wl-day-hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--line);}
+.wl-day-hd b{font-size:14px;color:var(--ink);}
+.wl-day-hd span{font-size:11.5px;color:var(--ink-3);}
+.wl-day.today .wl-day-hd b{color:var(--accent);}
+.wl-item{display:flex;align-items:flex-start;gap:7px;padding:5px 0;font-size:13px;line-height:1.4;border-bottom:1px dotted var(--line);}
+.wl-chk{flex:none;width:18px;height:18px;margin-top:1px;border:1.5px solid #B9B3A4;border-radius:5px;background:#fff;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:12px;}
+.wl-item.done .wl-chk{background:var(--accent);border-color:var(--accent);}
+.wl-dot{flex:none;width:7px;height:7px;border-radius:50%;margin-top:7px;}
+.wl-txt{flex:1;min-width:0;word-break:break-word;cursor:text;color:var(--ink);}
+.wl-item.done .wl-txt{text-decoration:line-through;color:var(--ink-3);}
+.wl-del{flex:none;border:none;background:transparent;color:var(--ink-3);cursor:pointer;font-size:15px;line-height:1;padding:0 2px;opacity:.5;}
+.wl-del:hover{color:var(--red);opacity:1;}
+.wl-edit{flex:1;min-width:0;font-family:inherit;font-size:13px;border:1px solid var(--accent);border-radius:6px;padding:3px 6px;outline:none;}
+.wl-add{display:flex;align-items:center;gap:6px;margin-top:8px;}
+.wl-who{display:inline-flex;gap:3px;flex:none;}
+.wl-who button{width:18px;height:18px;border-radius:50%;border:2px solid transparent;padding:0;cursor:pointer;opacity:.35;}
+.wl-who button.on{opacity:1;border-color:var(--ink);}
+.wl-add-in{flex:1;min-width:0;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:var(--bg);outline:none;}
+.wl-add-in:focus{border-color:var(--accent);background:#fff;}
+.wl-memo{width:100%;box-sizing:border-box;margin-top:10px;font-family:inherit;font-size:12px;color:var(--ink-2);border:1px dashed var(--line);border-radius:7px;padding:6px 8px;background:transparent;resize:vertical;min-height:34px;outline:none;}
+.wl-memo:focus{border-color:var(--accent);background:#fff;}
+.wl-empty{font-size:12px;color:var(--ink-3);padding:6px 0;}
 </style>
 </head>
 <body>
@@ -297,6 +337,7 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
   <button class="tab-btn" id="tab-store-status" data-page="store-status">매장별 라운딩현황</button>
   <button class="tab-btn" id="tab-issues" data-page="issues">이슈 트래커</button>
   <button class="tab-btn" id="tab-interior" data-page="interior">매장 인테리어</button>
+  <button class="tab-btn" id="tab-worklog" data-page="worklog">업무일지</button>
 </div>
 
 <div class="wrap" id="page-dashboard">
@@ -396,6 +437,16 @@ footer{text-align:center;font-size:12px;color:var(--ink-3);margin-top:32px;}
     </div>
     <div id="issue-list"></div>
   </section>
+</div>
+
+<div class="wrap" id="page-worklog" style="display:none;">
+  <div class="page-head">
+    <div>
+      <h1>업무일지</h1>
+      <p>주간 업무를 바로 입력하고 체크해요. 담당자별 색으로 구분되고, 변경은 시트에 바로 저장돼요.</p>
+    </div>
+  </div>
+  <div id="wl-root"></div>
 </div>
 
 <div class="wrap" id="page-interior" style="display:none;">
@@ -1832,12 +1883,146 @@ function showInteriorDetail(nm){
   document.getElementById("interior-detail-wrap").innerHTML=html;
 }
 
+
+/* ===================== 업무일지 ===================== */
+var WL_WHO=[{k:"다은",c:"#3F9E76"},{k:"민지",c:"#E0A526"},{k:"공동",c:"#D65C82"}];
+var wl={items:[],monday:null,filter:"전체",who:"공동",editing:null,loaded:false,error:false,timer:null};
+try{ var _w=localStorage.getItem("wl-who"); if(_w) wl.who=_w; }catch(e){}
+
+function wlEsc(s){ return htmlEscape(String(s==null?"":s)).replace(/"/g,"&quot;"); }
+function wlPad(n){ return (n<10?"0":"")+n; }
+function wlFmt(d){ return d.getFullYear()+"-"+wlPad(d.getMonth()+1)+"-"+wlPad(d.getDate()); }
+function wlMondayOf(d){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); var wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; }
+function wlColor(w){ var f=WL_WHO.find(function(o){return o.k===w;}); return f?f.c:"#9B9B9B"; }
+function wlNewId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function wlSend(it){
+  if(!WORKLOG_URL) return;
+  var qs="action=save&id="+encodeURIComponent(it.id)+"&date="+it.date+"&kind="+encodeURIComponent(it.kind)
+    +"&who="+encodeURIComponent(it.who)+"&text="+encodeURIComponent(it.text)+"&done="+(it.done?"1":"0")
+    +"&doneDate="+encodeURIComponent(it.doneDate||"")+"&order="+it.order;
+  fetch(WORKLOG_URL+"?"+qs,{mode:"no-cors"}).catch(function(){ wl.error=true; });
+}
+function wlLoad(silent){
+  if(!WORKLOG_URL){ wl.loaded=true; renderWorklog(); return; }
+  fetch(WORKLOG_URL+"?action=list").then(function(r){return r.json();}).then(function(j){
+    if(!j||!j.ok) throw new Error("bad");
+    wl.items=j.items; wl.loaded=true; wl.error=false;
+    var ae=document.activeElement, root=document.getElementById("wl-root");
+    if(!(silent && ae && root && root.contains(ae))) renderWorklog();
+  }).catch(function(){ wl.error=true; wl.loaded=true; if(!silent) renderWorklog(); });
+}
+
+function renderWorklog(){
+  var root=document.getElementById("wl-root"); if(!root) return;
+  if(!wl.monday) wl.monday=wlMondayOf(new Date(TY,TM-1,TD));
+  var todayStr=TY+"-"+wlPad(TM)+"-"+wlPad(TD);
+  var days=[]; for(var i=0;i<7;i++){ var d=new Date(wl.monday); d.setDate(d.getDate()+i); days.push(d); }
+  days=days.filter(function(d,i){ return i<5 || wl.items.some(function(it){return it.date===wlFmt(d)&&it.kind==="업무";}); });
+  var first=days[0], last=days[days.length-1];
+  var weekItems=wl.items.filter(function(it){ return it.kind==="업무" && it.date>=wlFmt(wl.monday) && it.date<=wlFmt(last); });
+  var vis=function(it){ return wl.filter==="전체"||it.who===wl.filter; };
+  var shown=weekItems.filter(vis), doneN=shown.filter(function(it){return it.done;}).length;
+  var pct=shown.length?Math.round(doneN/shown.length*100):0;
+  var isThis=wlFmt(wl.monday)===wlFmt(wlMondayOf(new Date(TY,TM-1,TD)));
+
+  var h='';
+  if(!WORKLOG_URL) h+='<div class="wl-warn"><b>미리보기 모드</b> · 아직 시트와 연결되지 않아 새로고침하면 입력한 내용이 사라져요. worklog-script.gs를 배포한 뒤 index.html 상단 WORKLOG_URL에 주소를 넣어 주세요.</div>';
+  else if(wl.error) h+='<div class="wl-warn">시트에서 불러오지 못했어요. 인터넷 연결이나 웹앱 배포 설정(액세스: 모든 사용자)을 확인해 주세요.</div>';
+  h+='<div class="wl-bar"><div class="wl-nav"><button data-wl="prev">◀</button><span class="wl-range">'+(first.getMonth()+1)+'/'+first.getDate()+' ~ '+(last.getMonth()+1)+'/'+last.getDate()+(isThis?' · 이번 주':'')+'</span><button data-wl="next">▶</button>'+(isThis?'':'<button data-wl="today">이번 주</button>')+'<button data-wl="refresh" title="새로고침">↻</button></div>'
+    +'<div class="wl-chips">'+["전체","다은","민지","공동"].map(function(k){return '<button class="wl-chip'+(wl.filter===k?' on':'')+'" data-wl-filter="'+k+'">'+k+'</button>';}).join("")+'</div></div>';
+  h+='<div class="wl-prog"><span><b style="color:var(--ink);">'+doneN+'</b> / '+shown.length+' 완료 ('+pct+'%)</span><div class="bar"><span style="width:'+pct+'%"></span></div></div>';
+  h+='<div class="wl-grid">'+days.map(function(d){
+    var ds=wlFmt(d), tasks=wl.items.filter(function(it){return it.date===ds&&it.kind==="업무"&&vis(it);}).sort(function(a,b){return a.order-b.order;});
+    var memo=wl.items.find(function(it){return it.id==="memo-"+ds;});
+    var dn=tasks.filter(function(t){return t.done;}).length;
+    var body=tasks.length?tasks.map(function(t){
+      var txt=(wl.editing===t.id)
+        ?'<input class="wl-edit" data-edit="'+t.id+'" value="'+wlEsc(t.text)+'">'
+        :'<span class="wl-txt" data-wl-edit="'+t.id+'">'+wlEsc(t.text)+'</span>';
+      return '<div class="wl-item'+(t.done?' done':'')+'"><button class="wl-chk" data-wl-chk="'+t.id+'" aria-label="완료">'+(t.done?'✓':'')+'</button><span class="wl-dot" style="background:'+wlColor(t.who)+'"></span>'+txt+'<button class="wl-del" data-wl-del="'+t.id+'" aria-label="삭제">×</button></div>';
+    }).join(""):'<div class="wl-empty">업무 없음</div>';
+    return '<div class="wl-day'+(ds===todayStr?' today':'')+'"><div class="wl-day-hd"><b>'+d.getDate()+' ('+WD_KR[d.getDay()]+')</b><span>'+(tasks.length?dn+'/'+tasks.length:'')+'</span></div>'
+      +body
+      +'<div class="wl-add"><span class="wl-who">'+WL_WHO.map(function(o){return '<button style="background:'+o.c+'" class="'+(wl.who===o.k?'on':'')+'" data-wl-who="'+o.k+'" title="'+o.k+'"></button>';}).join("")+'</span><input class="wl-add-in" data-add="'+ds+'" placeholder="+ 업무 추가"></div>'
+      +'<textarea class="wl-memo" data-memo="'+ds+'" placeholder="memo" rows="1">'+wlEsc(memo?memo.text:"")+'</textarea></div>';
+  }).join("")+'</div>';
+  root.innerHTML=h;
+  if(wl.editing){ var inp=root.querySelector('[data-edit="'+wl.editing+'"]'); if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length); } }
+}
+
+function wlCommitEdit(id,val,cancel){
+  var it=wl.items.find(function(x){return x.id===id;});
+  wl.editing=null;
+  if(it && !cancel){ val=val.trim(); if(!val){ wlDelete(id); return; } if(val!==it.text){ it.text=val; wlSend(it); } }
+  renderWorklog();
+}
+function wlDelete(id){
+  wl.items=wl.items.filter(function(x){return x.id!==id;});
+  if(WORKLOG_URL) fetch(WORKLOG_URL+"?action=delete&id="+encodeURIComponent(id),{mode:"no-cors"}).catch(function(){ wl.error=true; });
+  renderWorklog();
+}
+
+document.addEventListener("click",function(e){
+  var root=document.getElementById("wl-root"); if(!root||!root.contains(e.target)) return;
+  var t=e.target.closest("[data-wl],[data-wl-filter],[data-wl-chk],[data-wl-del],[data-wl-edit],[data-wl-who]"); if(!t) return;
+  if(t.hasAttribute("data-wl")){
+    var a=t.getAttribute("data-wl");
+    if(a==="prev") wl.monday.setDate(wl.monday.getDate()-7);
+    else if(a==="next") wl.monday.setDate(wl.monday.getDate()+7);
+    else if(a==="today") wl.monday=wlMondayOf(new Date(TY,TM-1,TD));
+    else if(a==="refresh"){ wlLoad(false); return; }
+    renderWorklog(); return;
+  }
+  if(t.hasAttribute("data-wl-filter")){ wl.filter=t.getAttribute("data-wl-filter"); renderWorklog(); return; }
+  if(t.hasAttribute("data-wl-who")){ wl.who=t.getAttribute("data-wl-who"); try{localStorage.setItem("wl-who",wl.who);}catch(x){} renderWorklog(); return; }
+  if(t.hasAttribute("data-wl-chk")){
+    var it=wl.items.find(function(x){return x.id===t.getAttribute("data-wl-chk");});
+    if(it){ it.done=!it.done; it.doneDate=it.done?(TY+"-"+wlPad(TM)+"-"+wlPad(TD)):""; wlSend(it); renderWorklog(); }
+    return;
+  }
+  if(t.hasAttribute("data-wl-del")){ wlDelete(t.getAttribute("data-wl-del")); return; }
+  if(t.hasAttribute("data-wl-edit")){ wl.editing=t.getAttribute("data-wl-edit"); renderWorklog(); }
+});
+document.addEventListener("keydown",function(e){
+  var el=e.target;
+  if(el.classList&&el.classList.contains("wl-add-in")&&e.key==="Enter"&&!e.isComposing){
+    var v=el.value.trim(); if(!v) return;
+    var it={id:wlNewId(),date:el.getAttribute("data-add"),kind:"업무",who:wl.who,text:v,done:false,doneDate:"",order:Date.now()};
+    wl.items.push(it); wlSend(it);
+    renderWorklog();
+    var again=document.querySelector('.wl-add-in[data-add="'+it.date+'"]'); if(again) again.focus();
+  }else if(el.classList&&el.classList.contains("wl-edit")){
+    if(e.key==="Enter"&&!e.isComposing){ wlCommitEdit(el.getAttribute("data-edit"),el.value,false); }
+    else if(e.key==="Escape"){ wlCommitEdit(el.getAttribute("data-edit"),el.value,true); }
+  }
+});
+document.addEventListener("focusout",function(e){
+  var el=e.target;
+  if(el.classList&&el.classList.contains("wl-edit")&&wl.editing){ wlCommitEdit(el.getAttribute("data-edit"),el.value,false); }
+  else if(el.classList&&el.classList.contains("wl-memo")){
+    var ds=el.getAttribute("data-memo"), id="memo-"+ds, v=el.value.trim();
+    var it=wl.items.find(function(x){return x.id===id;});
+    if(!it && !v) return;
+    if(it && it.text===v) return;
+    if(!it){ it={id:id,date:ds,kind:"메모",who:"",text:v,done:false,doneDate:"",order:0}; wl.items.push(it); }
+    else it.text=v;
+    wlSend(it);
+  }
+});
+function wlOnOpen(){
+  if(!wl.loaded) wlLoad(false); else { renderWorklog(); wlLoad(true); }
+  if(!wl.timer) wl.timer=setInterval(function(){ var pg=document.getElementById("page-worklog"); if(pg&&pg.style.display!=="none"&&!document.hidden) wlLoad(true); },45000);
+}
+
 function switchToTab(page){
   document.querySelectorAll(".tab-btn").forEach(function(b){b.classList.toggle("active",b.getAttribute("data-page")===page);});
   document.getElementById("page-dashboard").style.display=(page==="dashboard")?"":"none";
   document.getElementById("page-store-status").style.display=(page==="store-status")?"":"none";
   document.getElementById("page-issues").style.display=(page==="issues")?"":"none";
   document.getElementById("page-interior").style.display=(page==="interior")?"":"none";
+  document.getElementById("page-worklog").style.display=(page==="worklog")?"":"none";
+  if(page==="worklog") wlOnOpen();
 }
 
 document.addEventListener("input",function(e){
