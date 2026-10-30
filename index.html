@@ -360,6 +360,12 @@ button.wl-dot:hover{box-shadow:0 0 0 3px rgba(0,0,0,.08);}
 .wl-radd{flex:none;width:26px;height:26px;border:1px solid var(--line);background:#fff;border-radius:7px;color:var(--ink-2);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:14px;padding:0;}
 .wl-radd:hover{background:var(--pink-soft);color:var(--ink);}
 .wl-add-in.round{border-color:var(--pink);background:var(--pink-soft);}
+.wl-item.etc{background:#ECEAE4;border:none;border-left:3px solid #9B9B9B;border-radius:7px;padding:5px 7px;margin-bottom:5px;font-weight:700;align-items:center;}
+.wl-item.etc .wl-txt{color:#5F5E5A;font-weight:700;}
+.wl-item.etc .wl-rico{color:#5F5E5A;}
+.wl-ewho{font-style:normal;font-size:10.5px;font-weight:700;color:#1A1A1A;padding:1px 6px;border-radius:999px;flex:none;}
+.wl-item.etc .wl-mv{font-size:10.5px;font-weight:700;opacity:.6;}
+.wl-add-in.etc{border-color:#9B9B9B;background:#ECEAE4;}
 </style>
 </head>
 <body>
@@ -1955,6 +1961,19 @@ function wlParseRound(v){
   var rest=v.replace(/라운딩/g," ").replace(/[\-–:·]+/g," ").trim();
   return rest?wlResolveStore(rest):null;
 }
+var WL_ETC_RE=/^(다은|민지)?[\s:·-]*((연차|반차|휴가|출장|대휴|경조사?|패밀리\s*데이|외근|워크샵|워크숍|재택|병가)[^\n]{0,10})$/;
+function wlParseEtc(v,force){
+  var m=String(v).trim().match(WL_ETC_RE);
+  if(m) return {who:m[1]||"공동",text:m[2].trim()};
+  if(!force) return null;
+  var m2=String(v).trim().match(/^(다은|민지)\s+(.+)$/);
+  return m2?{who:m2[1],text:m2[2].trim()}:{who:"공동",text:String(v).trim()};
+}
+function wlAddEtc(ds,e){
+  var it={id:wlNewId(),date:ds,kind:"기타",who:e.who,text:e.text,done:false,doneDate:"",order:Date.now()};
+  wl.items.push(it); wlSend(it); renderWorklog();
+  var again=document.querySelector('.wl-add-in[data-add="'+ds+'"]'); if(again) again.focus();
+}
 function wlAddItem(ds,kind,text){
   var it={id:wlNewId(),date:ds,kind:kind,who:"공동",text:text,done:false,doneDate:"",order:Date.now()};
   wl.items.push(it); wlSend(it); renderWorklog();
@@ -1965,10 +1984,12 @@ function wlSyncSchedule(){
   schedule=schedule.filter(function(e){return !e._wl;});
   var have={}; schedule.forEach(function(e){ have[e.y+"-"+e.m+"-"+e.d+"-"+e.t]=1; });
   wl.items.forEach(function(it){
-    if(it.kind!=="라운딩") return;
+    if(it.kind!=="라운딩"&&it.kind!=="기타") return;
     var dt=parseDate(it.date); if(!dt) return;
-    var k=dt.y+"-"+dt.m+"-"+dt.d+"-"+it.text; if(have[k]) return; have[k]=1;
-    schedule.push({y:dt.y,m:dt.m,d:dt.d,who:(it.who==="공동"||!it.who)?"전체":it.who,t:it.text,_wl:it.id});
+    var isEtc=(it.kind==="기타");
+    var t=isEtc?(((it.who==="다은"||it.who==="민지")&&it.text.indexOf(it.who)<0)?it.who+" "+it.text:it.text):it.text;
+    var k=dt.y+"-"+dt.m+"-"+dt.d+"-"+t; if(have[k]) return; have[k]=1;
+    schedule.push({y:dt.y,m:dt.m,d:dt.d,who:isEtc?"기타":((it.who==="공동"||!it.who)?"전체":it.who),t:t,_wl:it.id});
   });
   schedule.sort(function(a,b){return (a.y-b.y)||(a.m-b.m)||(a.d-b.d);});
   matchReports(); syncIssuesFromReports(); render();
@@ -1977,7 +1998,7 @@ function wlNextBizDay(ds){ var p=ds.split("-"); var d=new Date(+p[0],+p[1]-1,+p[
 function wlNewId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
 function wlSend(it){
-  if(it.kind==="라운딩") wl.dirty=true;
+  if(it.kind==="라운딩"||it.kind==="기타") wl.dirty=true;
   if(!WORKLOG_URL) return;
   var qs="action=save&id="+encodeURIComponent(it.id)+"&date="+it.date+"&kind="+encodeURIComponent(it.kind)
     +"&who="+encodeURIComponent(it.who)+"&text="+encodeURIComponent(it.text)+"&done="+(it.done?"1":"0")
@@ -2005,6 +2026,12 @@ function wlDayHTML(d,vis,todayStr,withMemo){
     var txt=(wl.editing===t.id)?'<input class="wl-edit" data-edit="'+t.id+'" value="'+wlEsc(t.text)+'">':'<span class="wl-txt" data-wl-edit="'+t.id+'">'+wlEsc(t.text)+'</span>';
     return '<div class="wl-item round" style="background:'+wlSoft(t.who)+';border-left-color:'+wlColor(t.who||'공동')+'"><button class="wl-rico" data-wl-cycle="'+t.id+'" title="라운딩 · 담당: '+(t.who||'공동')+' (눌러서 변경)"><i class="ti ti-building-store"></i></button>'+txt+st+'<button class="wl-del" data-wl-del="'+t.id+'" aria-label="삭제">×</button></div>';
   }).join("");
+  var etcs=wl.items.filter(function(it){return it.date===ds&&it.kind==="기타"&&vis(it);}).sort(function(a,b){return a.order-b.order;});
+  var etcHTML=etcs.map(function(t){
+    var txt=(wl.editing===t.id)?'<input class="wl-edit" data-edit="'+t.id+'" value="'+wlEsc(t.text)+'">':'<span class="wl-txt" data-wl-edit="'+t.id+'">'+wlEsc(t.text)+'</span>';
+    var who=(t.who&&t.who!=="공동")?'<em class="wl-ewho" style="background:'+wlColor(t.who)+'">'+t.who+'</em>':'';
+    return '<div class="wl-item etc" style="border-left-color:'+(t.who&&t.who!=="공동"?wlColor(t.who):'#9B9B9B')+'"><button class="wl-rico" data-wl-cycle="'+t.id+'" title="기타 일정 · 대상: '+(t.who||'공동')+' (눌러서 변경)"><i class="ti ti-calendar-event"></i></button>'+who+txt+'<button class="wl-mv" data-wl-ext="'+t.id+'" title="다음 영업일에도 같은 일정 추가">+1일</button><button class="wl-del" data-wl-del="'+t.id+'" aria-label="삭제">×</button></div>';
+  }).join("");
   var dn=tasks.filter(function(t){return t.done;}).length;
   var body=tasks.map(function(t){
     var txt=(wl.editing===t.id)
@@ -2012,12 +2039,12 @@ function wlDayHTML(d,vis,todayStr,withMemo){
       :'<span class="wl-txt" data-wl-edit="'+t.id+'">'+wlEsc(t.text)+'</span>';
     return '<div class="wl-item'+(t.done?' done':'')+'"><button class="wl-chk" data-wl-chk="'+t.id+'" aria-label="완료">'+(t.done?'✓':'')+'</button><button class="wl-dot" data-wl-cycle="'+t.id+'" title="담당: '+(t.who||'공동')+' (눌러서 변경)" style="background:'+wlColor(t.who||'공동')+'"></button>'+txt+(t.done?'':'<button class="wl-mv" data-wl-next="'+t.id+'" title="다음 영업일로 미루기">→</button>')+'<button class="wl-del" data-wl-del="'+t.id+'" aria-label="삭제">×</button></div>';
   }).join("");
-  if(!body && !roundHTML && withMemo) body='<div class="wl-empty">업무 없음</div>';
-  body=roundHTML+body;
+  if(!body && !roundHTML && !etcHTML && withMemo) body='<div class="wl-empty">업무 없음</div>';
+  body=etcHTML+roundHTML+body;
   var label=(wl.view==="month")?d.getDate()+' <small>('+WD_KR[d.getDay()]+')</small>':d.getDate()+' ('+WD_KR[d.getDay()]+')';
   return '<div class="wl-day'+(ds===todayStr?' today':'')+(wl.view==="month"?' mini':'')+(hol?' hol':'')+'"><div class="wl-day-hd"><b>'+label+'</b>'+(hol?'<em class="wl-hol">'+wlEsc(hol)+'</em>':'')+'<span>'+(tasks.length?dn+'/'+tasks.length:'')+'</span></div>'
     +body
-    +'<div class="wl-add"><button class="wl-radd" data-wl-round="'+ds+'" title="라운딩으로 추가 (매장명 입력 후 누르거나, 먼저 누르고 입력)"><i class="ti ti-building-store"></i></button><input class="wl-add-in" data-add="'+ds+'" placeholder="+ 업무 추가"></div>'
+    +'<div class="wl-add"><button class="wl-radd" data-wl-round="'+ds+'" title="라운딩으로 추가 (매장명 입력 후 누르거나, 먼저 누르고 입력)"><i class="ti ti-building-store"></i></button><button class="wl-radd" data-wl-etc="'+ds+'" title="휴가·출장 등 기타 일정으로 추가"><i class="ti ti-calendar-event"></i></button><input class="wl-add-in" data-add="'+ds+'" placeholder="+ 업무 추가"></div>'
     +(withMemo?'<textarea class="wl-memo" data-memo="'+ds+'" placeholder="memo" rows="1">'+wlEsc(memo?memo.text:"")+'</textarea>':'')+'</div>';
 }
 
@@ -2084,7 +2111,7 @@ function wlCommitEdit(id,val,cancel){
   renderWorklog();
 }
 function wlDelete(id){
-  var _d=wl.items.find(function(x){return x.id===id;}); if(_d&&_d.kind==="라운딩") wl.dirty=true;
+  var _d=wl.items.find(function(x){return x.id===id;}); if(_d&&(_d.kind==="라운딩"||_d.kind==="기타")) wl.dirty=true;
   wl.items=wl.items.filter(function(x){return x.id!==id;});
   if(WORKLOG_URL) fetch(WORKLOG_URL+"?action=delete&id="+encodeURIComponent(id),{mode:"no-cors"}).catch(function(){ wl.error=true; });
   renderWorklog();
@@ -2092,7 +2119,7 @@ function wlDelete(id){
 
 document.addEventListener("click",function(e){
   var root=document.getElementById("wl-root"); if(!root||!root.contains(e.target)) return;
-  var t=e.target.closest("[data-wl],[data-wl-filter],[data-wl-chk],[data-wl-del],[data-wl-edit],[data-wl-cycle],[data-wl-round],[data-wl-view],[data-wl-next],[data-wl-sweep]"); if(!t) return;
+  var t=e.target.closest("[data-wl],[data-wl-filter],[data-wl-chk],[data-wl-del],[data-wl-edit],[data-wl-cycle],[data-wl-round],[data-wl-etc],[data-wl-ext],[data-wl-view],[data-wl-next],[data-wl-sweep]"); if(!t) return;
   if(t.hasAttribute("data-wl")){
     var a=t.getAttribute("data-wl");
     var mo=(wl.view==="month");
@@ -2114,12 +2141,31 @@ document.addEventListener("click",function(e){
     wl.items.forEach(function(x){ if(x.kind==="업무"&&!wlIsHol(x)&&!x.done&&x.date<td){ x.date=td; x.order=base+(n++); wlSend(x); } });
     renderWorklog(); return;
   }
+  if(t.hasAttribute("data-wl-etc")){
+    var eds=t.getAttribute("data-wl-etc"), ein=root.querySelector('.wl-add-in[data-add="'+eds+'"]');
+    if(ein){
+      var ev2=ein.value.trim();
+      if(ev2){ wlAddEtc(eds,wlParseEtc(ev2,true)); }
+      else{ ein.dataset.mode="etc"; ein.removeAttribute("list"); ein.placeholder="휴가·출장 등 입력 (예: 다은 출장) 후 Enter"; ein.classList.add("etc"); ein.focus(); }
+    }
+    return;
+  }
+  if(t.hasAttribute("data-wl-ext")){
+    var src=wl.items.find(function(x){return x.id===t.getAttribute("data-wl-ext");});
+    if(src){
+      var nd=wlNextBizDay(src.date);
+      var dup=wl.items.some(function(x){return x.kind==="기타"&&x.date===nd&&x.text===src.text&&x.who===src.who;});
+      if(!dup){ var cl={id:wlNewId(),date:nd,kind:"기타",who:src.who,text:src.text,done:false,doneDate:"",order:Date.now()}; wl.items.push(cl); wlSend(cl); }
+      renderWorklog();
+    }
+    return;
+  }
   if(t.hasAttribute("data-wl-round")){
     var rds=t.getAttribute("data-wl-round"), rin=root.querySelector('.wl-add-in[data-add="'+rds+'"]');
     if(rin){
       var rv=rin.value.trim();
       if(rv){ wlAddItem(rds,"라운딩",wlResolveStore(rv)||rv); }
-      else{ rin.dataset.mode="round"; rin.setAttribute("list","wl-stores"); rin.placeholder="라운딩 매장 입력 후 Enter"; rin.classList.add("round"); rin.focus(); }
+      else{ rin.dataset.mode="round"; rin.classList.remove("etc"); rin.setAttribute("list","wl-stores"); rin.placeholder="라운딩 매장 입력 후 Enter"; rin.classList.add("round"); rin.focus(); }
     }
     return;
   }
@@ -2142,7 +2188,8 @@ document.addEventListener("keydown",function(e){
     var v=el.value.trim(); if(!v) return;
     var ds=el.getAttribute("data-add");
     if(el.dataset.mode==="round") wlAddItem(ds,"라운딩",wlResolveStore(v)||v);
-    else { var rs=wlParseRound(v); if(rs) wlAddItem(ds,"라운딩",rs); else wlAddItem(ds,"업무",v); }
+    else if(el.dataset.mode==="etc") wlAddEtc(ds,wlParseEtc(v,true));
+    else { var rs=wlParseRound(v), re=rs?null:wlParseEtc(v,false); if(rs) wlAddItem(ds,"라운딩",rs); else if(re) wlAddEtc(ds,re); else wlAddItem(ds,"업무",v); }
   }else if(el.classList&&el.classList.contains("wl-edit")){
     if(e.key==="Enter"&&!e.isComposing){ wlCommitEdit(el.getAttribute("data-edit"),el.value,false); }
     else if(e.key==="Escape"){ wlCommitEdit(el.getAttribute("data-edit"),el.value,true); }
