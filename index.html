@@ -227,7 +227,8 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .issue-row:last-child{border-bottom:none;}
 .issue-row .icon{font-size:16px;color:var(--accent);margin-top:2px;}
 .issue-row .body{flex:1;}
-.issue-row .meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-3);margin-bottom:3px;}
+.issue-row .meta{display:block;font-size:11.5px;line-height:1.6;color:var(--ink-3);margin-bottom:3px;}
+@media (max-width:600px){.issue-row{flex-wrap:wrap;align-items:flex-start;gap:6px 10px;}.issue-row .icon{margin-top:3px;}.issue-row .body{flex:1 1 calc(100% - 30px);}.issue-right{flex:1 1 100%;align-items:stretch;padding-left:26px;}.issue-right .issue-seg{display:flex;width:100%;}.issue-right .issue-seg .seg-btn{flex:1;padding-left:4px;padding-right:4px;}.issue-resolve{justify-content:flex-end;}}
 .issue-row .txt{font-size:13px;color:var(--ink);line-height:1.55;}
 .issue-row .due{font-size:11.5px;color:var(--amber-deep);margin-top:3px;}
 .issue-row .issue-note{font-size:11.5px;color:var(--ink-3);margin-top:3px;font-style:italic;}
