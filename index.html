@@ -2628,23 +2628,26 @@ function loadCSV(url,timeoutMs){
 /* ===== 현장 기록(앱 내 보고서 작성) ===== */
 var appReports=[], formReports=[], directActs=[];
 var RF_TOUCH=["마네킹 코디","행거 조닝","POP 교체","집기 정리","조명·청소","기타"];
-var RF_VOC_TAGS=["좋았던 것","문의 많음","아쉬움","품절·사이즈","연출 반응 좋음","연출 아쉬움","고객층 변화"];
-var RF_VOC_MAP={"고객층 변화":"고객동향","연출 반응 좋음":"VM 분석 및 인사이트","연출 아쉬움":"VM 분석 및 인사이트"};
+var RF_VOC_TAGS=["반응 좋은 상품","문의 많음","아쉬운 점","연출 반응 좋음","연출 아쉬움","고객층","직원 의견","행사·프로모션 반응","경쟁·주변 동향"];
+var RF_VOC_SUB=["남성","여성","유니섹스"];
+var RF_VOC_HINT={"문의 많음":"어떤 아이템 문의가 많았는지","고객층":"예: 20대 여성 위주, 가족 단위 증가","반응 좋은 상품":"반응 좋았던 상품·아이템","연출 반응 좋음":"어떤 연출에 반응이 좋았는지","연출 아쉬움":"어떤 연출이 아쉬웠는지"};
+function rfVocLabel(){ return rf.vocTag+((rf.vocTag==="문의 많음"&&rf.vocSub)?"·"+rf.vocSub:""); }
+var RF_VOC_MAP={"고객층 변화":"고객동향","고객층":"고객동향","경쟁·주변 동향":"고객동향","연출 반응 좋음":"VM 분석 및 인사이트","연출 아쉬움":"VM 분석 및 인사이트"};
 var RF_ACT_TYPES=["시설·인테리어","집기·비품","상품·재고","운영·인력","VMD 요청","기타"];
 var RF_URG=["급함","보통","참고"];
-var RF_TARGETS=["인테리어 업체","본사","타팀","VM"];
+var RF_TARGETS=["디시테","AL","그외 업체","세일즈파트","타팀","VM"];
 var RF_SCORE_ITEMS=["매장관리","근무상태","디스플레이"];
 var rf=null;
 function rfPad(n){ return (n<10?"0":"")+n; }
 function rfToday(){ var d=new Date(); return d.getFullYear()+"-"+rfPad(d.getMonth()+1)+"-"+rfPad(d.getDate()); }
-function rfBlank(store,date){ return {id:"",store:store||"",date:date||rfToday(),touch:[],photo:"",photos:[],scores:{},note:"",voc:[],acts:[],vocTag:"",actType:"",actUrg:"보통",actTarget:""}; }
+function rfBlank(store,date){ return {id:"",store:store||"",date:date||rfToday(),touch:[],photo:"",photos:[],scores:{},note:"",voc:[],acts:[],vocTag:"",vocSub:"",actType:"",actUrg:"보통",actTarget:""}; }
 function rfSaveDraft(){ try{ if(rf) localStorage.setItem("vmrep-draft",JSON.stringify(rf)); }catch(e){} }
 function rfClearDraft(){ try{ localStorage.removeItem("vmrep-draft"); }catch(e){} }
 function openReportForm(store,date){
   var id=store&&date?store+"|"+date:"";
   var ex=id?appReports.filter(function(w){return w.id===id;})[0]:null;
   var draft=null; try{ draft=JSON.parse(localStorage.getItem("vmrep-draft")||"null"); }catch(e){}
-  if(ex){ rf=JSON.parse(JSON.stringify(ex)); rf.photos=rf.photos||[]; rf.vocTag="";rf.actType="";rf.actUrg="보통";rf.actTarget=""; }
+  if(ex){ rf=JSON.parse(JSON.stringify(ex)); rf.photos=rf.photos||[]; rf.vocSub=""; rf.vocTag="";rf.actType="";rf.actUrg="보통";rf.actTarget=""; }
   else if(draft && (draft.photos=(draft.photos||[]).filter(function(x){return x.id;}),true) && (!store || (draft.store===store&&draft.date===date))){ rf=draft; }
   else rf=rfBlank(store,date);
   renderReportForm();
@@ -2681,7 +2684,8 @@ function renderReportForm(){
     +'<div class="rf-lbl">한 줄 총평</div><input type="text" id="rf-note" placeholder="오늘 방문 한 줄 요약" value="'+attrEscape(rf.note)+'">'
     +'<h4>② 현장 반응 <small>선택</small></h4>'
     +vocList+'<div class="rf-chips">'+rfChips(RF_VOC_TAGS,rf.vocTag,"data-rf-vtag",false)+'</div>'
-    +'<div class="rf-add"><input type="text" id="rf-voctext" placeholder="들은 얘기·관찰한 점"><button type="button" class="rf-btn" data-rf-addvoc>추가</button></div>'
+    +(rf.vocTag==="문의 많음"?'<div class="rf-lbl">구분</div><div class="rf-chips">'+rfChips(RF_VOC_SUB,rf.vocSub,"data-rf-vsub",false)+'</div>':'')
+    +'<div class="rf-add"><input type="text" id="rf-voctext" placeholder="'+attrEscape(RF_VOC_HINT[rf.vocTag]||"들은 얘기·관찰한 점")+'"><button type="button" class="rf-btn" data-rf-addvoc>추가</button></div>'
     +'<h4>③ 처리할 건 <small>선택 · 이슈 트래커로 등록</small></h4>'
     +actList
     +'<div class="rf-lbl">유형</div><div class="rf-chips">'+rfChips(RF_ACT_TYPES,rf.actType,"data-rf-atype",false)+'</div>'
@@ -2772,7 +2776,7 @@ function rfPush(w){
 }
 function rfSave(){
   rfReadInputs();
-  var pend=document.getElementById("rf-voctext"); if(pend&&pend.value.trim()&&rf.vocTag){ rf.voc.push({tag:rf.vocTag,text:pend.value.trim()}); }
+  var pend=document.getElementById("rf-voctext"); if(pend&&pend.value.trim()&&rf.vocTag){ rf.voc.push({tag:rfVocLabel(),text:pend.value.trim()}); }
   var pa=document.getElementById("rf-acttext"); if(pa&&pa.value.trim()&&rf.actType){ rf.acts.push({type:rf.actType,urg:rf.actUrg||"보통",target:rf.actTarget,text:pa.value.trim()}); }
   if(!rf.store||!rf.date){ alert("매장과 방문일을 선택해 주세요."); return; }
   if(rf.photos.some(function(x){return x.up;})){ alert("사진을 올리는 중이에요. 잠시 후 저장해 주세요."); return; }
@@ -2796,7 +2800,7 @@ function appToReport(w){
   var p=w.date.split("-"); var pts={A:5,B:3,C:1}, sc={};
   RF_SCORE_ITEMS.forEach(function(k){ sc[k]=pts[(w.scores||{})[k]]||null; });
   var buckets={"고객동향":[],"상품 VOC 및 판매 동향":[],"VM 분석 및 인사이트":[]};
-  (w.voc||[]).forEach(function(v){ buckets[RF_VOC_MAP[v.tag]||"상품 VOC 및 판매 동향"].push("- ["+v.tag+"] "+v.text); });
+  (w.voc||[]).forEach(function(v){ buckets[RF_VOC_MAP[v.tag]||RF_VOC_MAP[v.tag.replace(/·(남성|여성|유니섹스)$/,"")]||"상품 VOC 및 판매 동향"].push("- ["+v.tag+"] "+v.text); });
   (w.acts||[]).forEach(function(a){ if(a.urg==="참고") buckets["상품 VOC 및 판매 동향"].push("- [참고·"+a.type+"] "+a.text); });
   var st={summary:(w.note||"")}, any=!!w.note;
   Object.keys(buckets).forEach(function(k){ st[k]=buckets[k].join("\n"); if(st[k]) any=true; });
@@ -2834,7 +2838,7 @@ function rfLoadRemote(){
   return Promise.race([f,t]);
 }
 document.addEventListener("click",function(ev){
-  var t=ev.target.closest&&ev.target.closest("[data-rf],[data-rf-close],[data-rf-touch],[data-rf-score],[data-rf-vtag],[data-rf-addvoc],[data-rf-delvoc],[data-rf-atype],[data-rf-aurg],[data-rf-atarget],[data-rf-addact],[data-rf-delact],[data-rf-save],[data-rf-delete],[data-rf-photo],[data-rf-delphoto]");
+  var t=ev.target.closest&&ev.target.closest("[data-rf],[data-rf-close],[data-rf-touch],[data-rf-score],[data-rf-vtag],[data-rf-vsub],[data-rf-addvoc],[data-rf-delvoc],[data-rf-atype],[data-rf-aurg],[data-rf-atarget],[data-rf-addact],[data-rf-delact],[data-rf-save],[data-rf-delete],[data-rf-photo],[data-rf-delphoto]");
   if(!t) return;
   if(t.hasAttribute("data-rf")){ ev.preventDefault(); var v=t.getAttribute("data-rf"); var i=v.lastIndexOf("|"); if(v==="new") openReportForm(); else openReportForm(v.slice(0,i),v.slice(i+1)); return; }
   if(!rf) return;
@@ -2847,8 +2851,9 @@ document.addEventListener("click",function(ev){
   if(t.hasAttribute("data-rf-delphoto")){ var dp=rf.photos.splice(+t.getAttribute("data-rf-delphoto"),1)[0]; if(dp&&dp.id&&WORKLOG_URL) fetch(WORKLOG_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"deletePhoto",id:dp.id})}).catch(function(){}); }
   else if(t.hasAttribute("data-rf-touch")){ var k=t.getAttribute("data-rf-touch"),ix=rf.touch.indexOf(k); if(ix>=0) rf.touch.splice(ix,1); else rf.touch.push(k); }
   else if(t.hasAttribute("data-rf-score")){ var c=t.getAttribute("data-rf-score"),g=t.getAttribute("data-g"); rf.scores[c]=(rf.scores[c]===g)?null:g; }
-  else if(t.hasAttribute("data-rf-vtag")){ var vt=t.getAttribute("data-rf-vtag"); rf.vocTag=(rf.vocTag===vt)?"":vt; }
-  else if(t.hasAttribute("data-rf-addvoc")){ var el=document.getElementById("rf-voctext"); if(el.value.trim()&&rf.vocTag){ rf.voc.push({tag:rf.vocTag,text:el.value.trim()}); rf.vocTag=""; } else { alert("태그를 고르고 내용을 적어 주세요."); return; } }
+  else if(t.hasAttribute("data-rf-vtag")){ var vt=t.getAttribute("data-rf-vtag"); rf.vocTag=(rf.vocTag===vt)?"":vt; rf.vocSub=""; }
+  else if(t.hasAttribute("data-rf-vsub")){ var vs=t.getAttribute("data-rf-vsub"); rf.vocSub=(rf.vocSub===vs)?"":vs; }
+  else if(t.hasAttribute("data-rf-addvoc")){ var el=document.getElementById("rf-voctext"); if(el.value.trim()&&rf.vocTag){ rf.voc.push({tag:rfVocLabel(),text:el.value.trim()}); rf.vocTag=""; rf.vocSub=""; } else { alert("태그를 고르고 내용을 적어 주세요."); return; } }
   else if(t.hasAttribute("data-rf-delvoc")){ rf.voc.splice(+t.getAttribute("data-rf-delvoc"),1); }
   else if(t.hasAttribute("data-rf-atype")){ var at=t.getAttribute("data-rf-atype"); rf.actType=(rf.actType===at)?"":at; }
   else if(t.hasAttribute("data-rf-aurg")){ rf.actUrg=t.getAttribute("data-rf-aurg"); }
