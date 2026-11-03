@@ -475,6 +475,24 @@ body.rf-open .rf-fab{display:none}
 .rf-alt{font-size:12px;color:var(--ink-2);margin-right:auto}
 .rf-del{border:0;background:none;color:#B0301F;font:inherit;font-size:13px;cursor:pointer}
 .rf-save{border:0;background:var(--accent);color:#fff;border-radius:12px;padding:12px 28px;font:inherit;font-size:15px;cursor:pointer}
+
+.rf-phase{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}
+.rf-ph{font-size:13px;font-weight:600;margin-bottom:6px}
+.rf-slot{margin-bottom:6px}
+.rf-addp{width:100%;text-align:left;border:1px dashed var(--ink-3);background:#fff;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;cursor:pointer}
+.rf-addp em{font-style:normal;font-size:11px;color:#B0301F;margin-left:4px}
+.rf-addp b{font-weight:600;color:var(--accent)}
+.rf-ths{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.rf-th{position:relative;width:54px;height:54px;border-radius:8px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.rf-th img{width:100%;height:100%;object-fit:cover}
+.rf-th button{position:absolute;top:0;right:0;border:0;background:rgba(0,0,0,.55);color:#fff;width:18px;height:18px;line-height:16px;font-size:13px;border-radius:0 0 0 8px;cursor:pointer;padding:0}
+.rf-up{font-size:12px;color:var(--ink-3)}
+.rf-link{margin-top:8px;font-size:12px;color:var(--ink-2)}
+.rf-link summary{cursor:pointer;margin-bottom:6px}
+.ss-photos{margin:14px 0}
+.ph-grp{margin-bottom:10px}.ph-t{font-size:12px;color:var(--ink-2);margin-bottom:6px}
+.ph-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.ph-g img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block}
 </style>
 </head>
 <body>
@@ -1718,6 +1736,12 @@ function showVisitDetail(key){
       +'<div class="ss-date-right">'+reportBtn+'</div>'
     +'</div>';
 
+  if(rep&&rep.photos&&rep.photos.length){
+    html+='<div class="ss-photos">'+[["before","비포"],["after","애프터"]].map(function(ph){
+      var l=rep.photos.filter(function(x){return x.phase===ph[0]&&x.id;}); if(!l.length) return "";
+      return '<div class="ph-grp"><div class="ph-t">'+ph[1]+' '+l.length+'</div><div class="ph-g">'+l.map(function(x){return '<a href="https://drive.google.com/file/d/'+x.id+'/view" target="_blank" rel="noopener"><img loading="lazy" src="https://drive.google.com/thumbnail?id='+x.id+'&sz=w400" alt="'+attrEscape(x.slot)+'"></a>';}).join("")+'</div></div>';
+    }).join("")+'</div>';
+  }
   if(rep&&rep.scores&&(rep.scores.매장관리!==null||rep.scores.근무상태!==null||rep.scores.디스플레이!==null)){
     var SCORE_MAX=5;
     var SCORE_ICON={"매장관리":"ti-building-store","근무상태":"ti-user-check","디스플레이":"ti-layout-grid"};
@@ -2607,15 +2631,15 @@ var RF_SCORE_ITEMS=["매장관리","근무상태","디스플레이"];
 var rf=null;
 function rfPad(n){ return (n<10?"0":"")+n; }
 function rfToday(){ var d=new Date(); return d.getFullYear()+"-"+rfPad(d.getMonth()+1)+"-"+rfPad(d.getDate()); }
-function rfBlank(store,date){ return {id:"",store:store||"",date:date||rfToday(),touch:[],photo:"",scores:{},note:"",voc:[],acts:[],vocTag:"",actType:"",actUrg:"보통",actTarget:""}; }
+function rfBlank(store,date){ return {id:"",store:store||"",date:date||rfToday(),touch:[],photo:"",photos:[],scores:{},note:"",voc:[],acts:[],vocTag:"",actType:"",actUrg:"보통",actTarget:""}; }
 function rfSaveDraft(){ try{ if(rf) localStorage.setItem("vmrep-draft",JSON.stringify(rf)); }catch(e){} }
 function rfClearDraft(){ try{ localStorage.removeItem("vmrep-draft"); }catch(e){} }
 function openReportForm(store,date){
   var id=store&&date?store+"|"+date:"";
   var ex=id?appReports.filter(function(w){return w.id===id;})[0]:null;
   var draft=null; try{ draft=JSON.parse(localStorage.getItem("vmrep-draft")||"null"); }catch(e){}
-  if(ex){ rf=JSON.parse(JSON.stringify(ex)); rf.vocTag="";rf.actType="";rf.actUrg="보통";rf.actTarget=""; }
-  else if(draft && (!store || (draft.store===store&&draft.date===date))){ rf=draft; }
+  if(ex){ rf=JSON.parse(JSON.stringify(ex)); rf.photos=rf.photos||[]; rf.vocTag="";rf.actType="";rf.actUrg="보통";rf.actTarget=""; }
+  else if(draft && (draft.photos=(draft.photos||[]).filter(function(x){return x.id;}),true) && (!store || (draft.store===store&&draft.date===date))){ rf=draft; }
   else rf=rfBlank(store,date);
   renderReportForm();
 }
@@ -2628,6 +2652,7 @@ function rfChips(list,sel,attr,multi){
 function renderReportForm(){
   var host=document.getElementById("rf-host");
   if(!host){ host=document.createElement("div"); host.id="rf-host"; document.body.appendChild(host); }
+  var oldBody=host.querySelector(".rf-body"), keepTop=oldBody?oldBody.scrollTop:0;
   if(!rf){ host.innerHTML=""; document.body.classList.remove("rf-open"); return; }
   document.body.classList.add("rf-open");
   var stores=storeList.slice();
@@ -2644,7 +2669,8 @@ function renderReportForm(){
     +'<div class="rf-row"><select id="rf-store">'+storeOpts+'</select><input type="date" id="rf-date" value="'+rf.date+'"></div>'
     +'<h4>① 방문 기록</h4>'
     +'<div class="rf-lbl">터치업 한 것</div><div class="rf-chips">'+rfChips(RF_TOUCH,rf.touch,"data-rf-touch",true)+'</div>'
-    +'<div class="rf-lbl">전후 사진 링크</div><input type="url" id="rf-photo" placeholder="드라이브·앨범 공유 링크" value="'+attrEscape(rf.photo)+'">'
+    +'<div class="rf-lbl">전후 사진 <small style="color:var(--ink-3)">앨범·카메라에서 바로 올려요</small></div>'+rfPhotoHTML()
+    +'<details class="rf-link"><summary>사진 링크로 직접 넣기</summary><input type="url" id="rf-photo" placeholder="드라이브·앨범 공유 링크" value="'+attrEscape(rf.photo)+'"></details>'
     +'<div class="rf-lbl">상태 점수</div>'+scoreRows
     +'<div class="rf-lbl">한 줄 총평</div><input type="text" id="rf-note" placeholder="오늘 방문 한 줄 요약" value="'+attrEscape(rf.note)+'">'
     +'<h4>② 현장 반응 <small>선택</small></h4>'
@@ -2661,7 +2687,73 @@ function renderReportForm(){
     +'<div class="rf-ft"><a href="'+formLink+'" target="_blank" rel="noopener" class="rf-alt">구글폼으로 작성</a>'
     +(rf.id?'<button type="button" class="rf-del" data-rf-delete>삭제</button>':'')
     +'<button type="button" class="rf-save" data-rf-save>저장</button></div></div>';
+  var nb=host.querySelector(".rf-body"); if(nb) nb.scrollTop=keepTop;
 }
+var RF_SLOTS=[["전면","전면 파노라마",true],["마네킹","마네킹",true],["기타","기타",false]];
+function rfPhotoHTML(){
+  return [["before","비포"],["after","애프터"]].map(function(ph){
+    var cells=RF_SLOTS.map(function(sl){
+      var list=rf.photos.filter(function(x){return x.phase===ph[0]&&x.slot===sl[0];});
+      var thumbs=list.map(function(x){
+        var idx=rf.photos.indexOf(x);
+        var img=x.id?'<img src="https://drive.google.com/thumbnail?id='+x.id+'&sz=w200" alt="">':'<span class="rf-up">'+(x.err?'실패':'…')+'</span>';
+        return '<span class="rf-th">'+img+'<button type="button" data-rf-delphoto="'+idx+'" aria-label="삭제">×</button></span>';
+      }).join("");
+      var need=sl[2]&&!list.length?' <em>필수</em>':'';
+      return '<div class="rf-slot"><button type="button" class="rf-addp" data-rf-photo="'+ph[0]+'|'+sl[0]+'"><i class="ti ti-camera-plus"></i> '+sl[1]+(list.length?' <b>'+list.length+'</b>':'')+need+'</button><div class="rf-ths">'+thumbs+'</div></div>';
+    }).join("");
+    return '<div class="rf-phase"><div class="rf-ph">'+ph[1]+'</div>'+cells+'</div>';
+  }).join("");
+}
+function rfShrink(file){
+  return new Promise(function(res,rej){
+    var img=new Image(), url=URL.createObjectURL(file);
+    img.onload=function(){
+      var M=1280, k=Math.min(1,M/Math.max(img.width,img.height)), c=document.createElement("canvas");
+      c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+      res(c.toDataURL("image/jpeg",0.8).split(",")[1]);
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error("img")); };
+    img.src=url;
+  });
+}
+var rfQueue=[], rfBusy=0;
+function rfRerender(){
+  if(!rf) return; rfReadInputs();
+  var v=(document.getElementById("rf-voctext")||{}).value, a=(document.getElementById("rf-acttext")||{}).value;
+  rfSaveDraft(); renderReportForm();
+  var ev=document.getElementById("rf-voctext"), ea=document.getElementById("rf-acttext");
+  if(v&&ev) ev.value=v; if(a&&ea) ea.value=a;
+}
+function rfPump(){
+  while(rfBusy<2&&rfQueue.length){
+    var job=rfQueue.shift(); rfBusy++;
+    (function(job){
+      fetch(WORKLOG_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"uploadPhoto",store:job.store,date:job.date,phase:job.item.phase,slot:job.item.slot,mime:"image/jpeg",data:job.data})})
+        .then(function(r){return r.json();}).then(function(j){
+          if(!j||!j.ok) throw new Error("fail");
+          job.item.id=j.id; job.item.folder=j.folder; job.item.up=false;
+        }).catch(function(){ job.item.err=true; job.item.up=false; })
+        .then(function(){ rfBusy--; if(rf) rfRerender(); rfPump(); });
+    })(job);
+  }
+}
+function rfAddPhotos(files){
+  var pk=rf&&rf._pick; if(!pk||!files.length) return;
+  rfReadInputs();
+  if(!rf.store||!rf.date){ alert("매장과 방문일을 먼저 선택해 주세요."); return; }
+  if(!WORKLOG_URL){ alert("업무일지 연결 주소가 없어 사진을 올릴 수 없어요."); return; }
+  Array.prototype.forEach.call(files,function(f){
+    var item={phase:pk.phase,slot:pk.slot,id:"",up:true};
+    rf.photos.push(item);
+    rfShrink(f).then(function(b64){ rfQueue.push({item:item,store:rf.store,date:rf.date,data:b64}); rfPump(); })
+      .catch(function(){ item.err=true; item.up=false; rfRerender(); });
+  });
+  rfRerender();
+}
+(function(){ var i=document.createElement("input"); i.type="file"; i.accept="image/*"; i.multiple=true; i.id="rf-file"; i.style.display="none";
+  i.addEventListener("change",function(){ var f=i.files; rfAddPhotos(f); i.value=""; }); document.body.appendChild(i); })();
 function rfReadInputs(){
   var g=function(id){var el=document.getElementById(id);return el?el.value:null;};
   if(g("rf-store")!==null) rf.store=g("rf-store");
@@ -2677,7 +2769,11 @@ function rfSave(){
   var pend=document.getElementById("rf-voctext"); if(pend&&pend.value.trim()&&rf.vocTag){ rf.voc.push({tag:rf.vocTag,text:pend.value.trim()}); }
   var pa=document.getElementById("rf-acttext"); if(pa&&pa.value.trim()&&rf.actType){ rf.acts.push({type:rf.actType,urg:rf.actUrg||"보통",target:rf.actTarget,text:pa.value.trim()}); }
   if(!rf.store||!rf.date){ alert("매장과 방문일을 선택해 주세요."); return; }
-  var oldId=rf.id, w={id:rf.store+"|"+rf.date,store:rf.store,date:rf.date,touch:rf.touch,photo:rf.photo,note:rf.note,scores:rf.scores,voc:rf.voc,acts:rf.acts,ts:Date.now()};
+  if(rf.photos.some(function(x){return x.up;})){ alert("사진을 올리는 중이에요. 잠시 후 저장해 주세요."); return; }
+  var miss=[]; ["before","after"].forEach(function(ph){ RF_SLOTS.forEach(function(sl){ if(sl[2]&&!rf.photos.some(function(x){return x.phase===ph&&x.slot===sl[0]&&x.id;})) miss.push((ph==="before"?"비포 ":"애프터 ")+sl[1]); }); });
+  if(miss.length&&!rf.photo&&!confirm("빠진 사진: "+miss.join(", ")+"\n그래도 저장할까요?")) return;
+  rf.photos=rf.photos.filter(function(x){return x.id;});
+  var oldId=rf.id, w={id:rf.store+"|"+rf.date,store:rf.store,date:rf.date,touch:rf.touch,photo:rf.photo,photos:rf.photos,note:rf.note,scores:rf.scores,voc:rf.voc,acts:rf.acts,ts:Date.now()};
   if(oldId&&oldId!==w.id) rfDeleteRemote(oldId);
   appReports=appReports.filter(function(x){return x.id!==w.id&&x.id!==oldId;}); appReports.push(w);
   if(WORKLOG_URL) rfPush(w);
@@ -2699,7 +2795,7 @@ function appToReport(w){
   var st={summary:(w.note||"")}, any=!!w.note;
   Object.keys(buckets).forEach(function(k){ st[k]=buckets[k].join("\n"); if(st[k]) any=true; });
   var touch=(w.touch||[]).length?"터치업: "+w.touch.join(", "):"";
-  return {y:+p[0],m:+p[1],d:+p[2],store:w.store,link:w.photo||"",summary:(w.note||touch),scores:sc,structured:any?st:null,aiLabels:null,_app:true,_appId:w.id,_touch:touch};
+  return {y:+p[0],m:+p[1],d:+p[2],store:w.store,link:w.photo||((w.photos&&w.photos[0])?w.photos[0].folder||"":""),photos:w.photos||[],summary:(w.note||touch),scores:sc,structured:any?st:null,aiLabels:null,_app:true,_appId:w.id,_touch:touch};
 }
 function rebuildReports(){
   var keys={}; appReports.forEach(function(w){ keys[w.store+"|"+w.date]=1; });
@@ -2732,7 +2828,7 @@ function rfLoadRemote(){
   return Promise.race([f,t]);
 }
 document.addEventListener("click",function(ev){
-  var t=ev.target.closest&&ev.target.closest("[data-rf],[data-rf-close],[data-rf-touch],[data-rf-score],[data-rf-vtag],[data-rf-addvoc],[data-rf-delvoc],[data-rf-atype],[data-rf-aurg],[data-rf-atarget],[data-rf-addact],[data-rf-delact],[data-rf-save],[data-rf-delete]");
+  var t=ev.target.closest&&ev.target.closest("[data-rf],[data-rf-close],[data-rf-touch],[data-rf-score],[data-rf-vtag],[data-rf-addvoc],[data-rf-delvoc],[data-rf-atype],[data-rf-aurg],[data-rf-atarget],[data-rf-addact],[data-rf-delact],[data-rf-save],[data-rf-delete],[data-rf-photo],[data-rf-delphoto]");
   if(!t) return;
   if(t.hasAttribute("data-rf")){ ev.preventDefault(); var v=t.getAttribute("data-rf"); var i=v.lastIndexOf("|"); if(v==="new") openReportForm(); else openReportForm(v.slice(0,i),v.slice(i+1)); return; }
   if(!rf) return;
@@ -2741,7 +2837,9 @@ document.addEventListener("click",function(ev){
   if(t.hasAttribute("data-rf-save")){ rfSave(); return; }
   if(t.hasAttribute("data-rf-delete")){ rfDelete(); return; }
   rfReadInputs();
-  if(t.hasAttribute("data-rf-touch")){ var k=t.getAttribute("data-rf-touch"),ix=rf.touch.indexOf(k); if(ix>=0) rf.touch.splice(ix,1); else rf.touch.push(k); }
+  if(t.hasAttribute("data-rf-photo")){ var pp=t.getAttribute("data-rf-photo").split("|"); rf._pick={phase:pp[0],slot:pp[1]}; document.getElementById("rf-file").click(); return; }
+  if(t.hasAttribute("data-rf-delphoto")){ var dp=rf.photos.splice(+t.getAttribute("data-rf-delphoto"),1)[0]; if(dp&&dp.id&&WORKLOG_URL) fetch(WORKLOG_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"deletePhoto",id:dp.id})}).catch(function(){}); }
+  else if(t.hasAttribute("data-rf-touch")){ var k=t.getAttribute("data-rf-touch"),ix=rf.touch.indexOf(k); if(ix>=0) rf.touch.splice(ix,1); else rf.touch.push(k); }
   else if(t.hasAttribute("data-rf-score")){ var c=t.getAttribute("data-rf-score"),g=t.getAttribute("data-g"); rf.scores[c]=(rf.scores[c]===g)?null:g; }
   else if(t.hasAttribute("data-rf-vtag")){ var vt=t.getAttribute("data-rf-vtag"); rf.vocTag=(rf.vocTag===vt)?"":vt; }
   else if(t.hasAttribute("data-rf-addvoc")){ var el=document.getElementById("rf-voctext"); if(el.value.trim()&&rf.vocTag){ rf.voc.push({tag:rf.vocTag,text:el.value.trim()}); rf.vocTag=""; } else { alert("태그를 고르고 내용을 적어 주세요."); return; } }
