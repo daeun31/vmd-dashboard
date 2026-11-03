@@ -2694,12 +2694,13 @@ function loadCSV(url,timeoutMs){
 /* ===== 현장 기록(앱 내 보고서 작성) ===== */
 var appReports=[], formReports=[], directActs=[];
 var RF_TOUCH=["마네킹 코디","행거 조닝","POP 교체","집기 정리","조명·청소","기타"];
-var RF_VOC_TAGS=["반응 좋은 상품","문의 많음","아쉬운 점","연출 반응 좋음","연출 아쉬움","고객층","직원 의견","행사·프로모션 반응","경쟁·주변 동향"];
+var RF_VOC_GROUPS=[["상품",["호조상품","미비상품","문의상품"]],["연출",["연출 호평","연출 보완"]],["고객·매장",["고객층","직원의견"]],["외부",["행사반응","경쟁동향"]]];
+var RF_VOC_TAGS=[].concat.apply([],RF_VOC_GROUPS.map(function(g){return g[1];}));
 var RF_VOC_SUB=["남성","여성","유니섹스"];
-var RF_VOC_HINT={"문의 많음":"어떤 아이템 문의가 많았는지","고객층":"예: 20대 여성 위주, 가족 단위 증가","반응 좋은 상품":"반응 좋았던 상품·아이템","연출 반응 좋음":"어떤 연출에 반응이 좋았는지","연출 아쉬움":"어떤 연출이 아쉬웠는지"};
-function rfVocLabel(){ return rf.vocTag+((rf.vocTag==="문의 많음"&&rf.vocSub)?"·"+rf.vocSub:""); }
-var RF_VOC_MAP={"고객층 변화":"고객동향","고객층":"고객동향","경쟁·주변 동향":"고객동향","연출 반응 좋음":"VM 분석 및 인사이트","연출 아쉬움":"VM 분석 및 인사이트"};
-var RF_ACT_TYPES=["시설·인테리어","집기·비품","상품·재고","운영·인력","VMD 요청","기타"];
+var RF_VOC_HINT={"호조상품":"반응·판매가 좋은 상품","미비상품":"반응·판매가 약한 상품","문의상품":"문의가 많았던 아이템","연출 호평":"반응이 좋았던 연출","연출 보완":"보완이 필요한 연출","고객층":"예: 20대 여성 위주, 가족 단위 증가","직원의견":"매장 직원이 전한 의견","행사반응":"행사·프로모션 반응","경쟁동향":"주변·경쟁 매장 동향"};
+function rfVocLabel(){ return rf.vocTag+((rf.vocTag==="문의상품"&&rf.vocSub)?"·"+rf.vocSub:""); }
+var RF_VOC_MAP={"고객층 변화":"고객동향","고객층":"고객동향","직원의견":"고객동향","경쟁동향":"고객동향","경쟁·주변 동향":"고객동향","연출 호평":"VM 분석 및 인사이트","연출 보완":"VM 분석 및 인사이트","연출 반응 좋음":"VM 분석 및 인사이트","연출 아쉬움":"VM 분석 및 인사이트"};
+var RF_ACT_TYPES=["시설","집기","상품","운영","기타"];
 var RF_URG=["급함","보통","참고"];
 var RF_TARGETS=["디시테","AL","그외 업체","세일즈파트","타팀","VM"];
 var RF_SCORE_ITEMS=["매장관리","근무상태","디스플레이"];
@@ -2747,10 +2748,10 @@ function renderReportForm(){
     +'<div class="rf-lbl">전후 사진 <small style="color:var(--ink-3)">앨범·카메라에서 바로 올려요</small></div>'+rfPhotoHTML()
     +'<details class="rf-link"><summary>사진 링크로 직접 넣기</summary><input type="url" id="rf-photo" placeholder="드라이브·앨범 공유 링크" value="'+attrEscape(rf.photo)+'"></details>'
     +'<div class="rf-lbl">상태 점수</div>'+scoreRows
-    +'<div class="rf-lbl">한 줄 총평</div><input type="text" id="rf-note" placeholder="오늘 방문 한 줄 요약" value="'+attrEscape(rf.note)+'">'
+    
     +'<h4>② 현장 반응 <small>선택</small></h4>'
-    +vocList+'<div class="rf-chips">'+rfChips(RF_VOC_TAGS,rf.vocTag,"data-rf-vtag",false)+'</div>'
-    +(rf.vocTag==="문의 많음"?'<div class="rf-lbl">구분</div><div class="rf-chips">'+rfChips(RF_VOC_SUB,rf.vocSub,"data-rf-vsub",false)+'</div>':'')
+    +vocList+RF_VOC_GROUPS.map(function(g){ return '<div class="rf-lbl">'+g[0]+'</div><div class="rf-chips">'+rfChips(g[1],rf.vocTag,"data-rf-vtag",false)+'</div>'; }).join("")
+    +(rf.vocTag==="문의상품"?'<div class="rf-lbl">구분</div><div class="rf-chips">'+rfChips(RF_VOC_SUB,rf.vocSub,"data-rf-vsub",false)+'</div>':'')
     +'<div class="rf-add"><input type="text" id="rf-voctext" placeholder="'+attrEscape(RF_VOC_HINT[rf.vocTag]||"들은 얘기·관찰한 점")+'"><button type="button" class="rf-btn" data-rf-addvoc>추가</button></div>'
     +'<h4>③ 처리할 건 <small>선택 · 이슈 트래커로 등록</small></h4>'
     +actList
@@ -2765,7 +2766,7 @@ function renderReportForm(){
     +'<button type="button" class="rf-save" data-rf-save>저장</button></div></div>';
   var nb=host.querySelector(".rf-body"); if(nb) nb.scrollTop=keepTop;
 }
-var RF_SLOTS=[["전면","전면 파노라마",true],["마네킹","마네킹",false],["행거","행거",false],["디티페이블","디티페이블",false],["기타","기타",false]];
+var RF_SLOTS=[["전면","전면 파노라마",true],["마네킹","마네킹",false],["행거","행거",false],["디피테이블","디피테이블",false],["기타","기타",false]];
 function rfPhotoHTML(){
   return [["before","비포"],["after","애프터"]].map(function(ph){
     var cells=RF_SLOTS.map(function(sl){
