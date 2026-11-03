@@ -441,6 +441,40 @@ h1{font-weight:640;letter-spacing:-.02em;}
 h2,h3{font-weight:600;letter-spacing:-.01em;}
 body{letter-spacing:-.003em;}
 .kpi .val{font-weight:600;}
+/* 현장 기록 */
+.rf-fab{position:fixed;right:16px;bottom:18px;z-index:50;border:0;border-radius:999px;background:var(--ink);color:#fff;padding:12px 18px;font:inherit;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer}
+body.rf-open{overflow:hidden}
+body.rf-open .rf-fab{display:none}
+.rf-back{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:90}
+.rf-sheet{position:fixed;z-index:91;left:50%;transform:translateX(-50%);bottom:0;width:min(560px,100%);max-height:92vh;background:var(--card);border-radius:20px 20px 0 0;display:flex;flex-direction:column}
+.rf-hd{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+.rf-hd h3{margin:0;font-size:16px}
+.rf-x{border:0;background:none;font-size:24px;line-height:1;color:var(--ink-2);cursor:pointer}
+.rf-body{overflow-y:auto;padding:6px 18px 18px;-webkit-overflow-scrolling:touch}
+.rf-body h4{margin:20px 0 8px;font-size:14px}
+.rf-body h4 small{font-weight:400;color:var(--ink-3);margin-left:6px;font-size:12px}
+.rf-lbl{font-size:12px;color:var(--ink-2);margin:10px 0 5px}
+.rf-body input,.rf-body select{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px;background:#fff;color:var(--ink)}
+.rf-row{display:flex;gap:8px;margin-top:12px}
+.rf-chips{display:flex;flex-wrap:wrap;gap:6px}
+.rf-chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+.rf-chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.rf-score{display:flex;justify-content:space-between;align-items:center;margin:4px 0}
+.rf-score span{font-size:14px}
+.rf-score>div{display:flex;gap:6px}
+.rf-g{width:44px;text-align:center;padding:7px 0}
+.rf-add{display:flex;gap:8px;margin-top:8px}
+.rf-btn{border:1px solid var(--ink);background:#fff;border-radius:10px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.rf-item{position:relative;background:var(--bg);border-radius:10px;padding:9px 34px 9px 12px;margin-bottom:6px;font-size:13.5px}
+.rf-item button{position:absolute;right:8px;top:6px;border:0;background:none;font-size:18px;color:var(--ink-3);cursor:pointer}
+.rf-u{font-size:11px;border-radius:6px;padding:1px 6px}
+.rf-u-hot{background:#FBE0DB;color:#B0301F}.rf-u-mid{background:#FBEFD2;color:#8A6410}.rf-u-ref{background:#E8E8EC;color:#555}
+.rf-tg{font-size:12px;color:var(--ink-2)}
+.rf-hint{font-size:12px;color:var(--ink-3);margin-top:8px}
+.rf-ft{display:flex;align-items:center;gap:10px;padding:12px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.rf-alt{font-size:12px;color:var(--ink-2);margin-right:auto}
+.rf-del{border:0;background:none;color:#B0301F;font:inherit;font-size:13px;cursor:pointer}
+.rf-save{border:0;background:var(--accent);color:#fff;border-radius:12px;padding:12px 28px;font:inherit;font-size:15px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -918,6 +952,7 @@ function syncIssuesFromReports(){
       });
     });
   });
+  syncDirectIssues();
 }
 /* 2026-07-01부터 "보고서 제출 기준 완료"를 적용합니다.
    그 이전(5~6월) 일정은 보고서 제도가 없었으므로 날짜 경과 기준으로 자동 완료 처리합니다. */
@@ -1672,9 +1707,9 @@ function showVisitDetail(key){
   if(!e){ document.getElementById("ss-detail-wrap").innerHTML='<div class="ss-detail-empty"><i class="ti ti-file-search"></i><p>왼쪽에서 라운딩 일자를 선택해 주세요.</p></div>'; return; }
   var t=storeType(e.t);
   var rep=e._report;
-  var reportBtn=(rep&&rep.link)
+  var reportBtn=(rep&&rep.link&&!rep._app)
     ?'<a class="ss-report-btn" href="'+rep.link+'" target="_blank" rel="noopener"><i class="ti ti-file-text"></i>보고서</a>'
-    :'<a class="ss-report-btn" href="'+reportFormLink(e)+'" target="_blank" rel="noopener"><i class="ti ti-pencil-plus"></i>보고서 작성</a>';
+    :'<a class="ss-report-btn" href="#" data-rf="'+attrEscape(e.t+"|"+e.y+"-"+rfPad(e.m)+"-"+rfPad(e.d))+'"><i class="ti ti-pencil-plus"></i>'+(rep&&rep._app?'보고서 수정':'보고서 작성')+'</a>';
 
   var html='<div class="ss-store-hd"><i class="ti '+(TYPE_ICON[t]||'ti-building-store')+'"></i><h2>'+e.t+'</h2></div>'
     +'<div class="ss-date-section">'
@@ -1814,6 +1849,7 @@ var ISSUE_STATUS_COLOR={"미해결":"#D6402E","진행중":"#E0A526","보류":"#7
 var ISSUE_TYPE_ICON={"매장요청사항":"ti-clipboard-list","운영이슈 및 개선사항":"ti-alert-triangle"};
 var issueSearchQuery="", issueTypeFilter="", issueGroupMode="status";
 function issueMatchesFilter(is){
+  if(directMeta(is)){ if(issueTypeFilter && is.type!==issueTypeFilter) return false; if(issueSearchQuery && (is.store||"").indexOf(issueSearchQuery)<0) return false; return true; }
   if(ISSUE_EXCLUDE.test(is.content||"")) return false;
   if(!isTrackableForOps(is.type,is.content)) return false;
   if(issueTypeFilter && is.type!==issueTypeFilter) return false;
@@ -1846,6 +1882,10 @@ function dedupeIssues(list){
   });
   return kept;
 }
+function rfIssueChips(is){
+  var m=directMeta(is); if(!m) return "";
+  return ' <span class="rf-u rf-u-'+(m.urg==="급함"?"hot":"mid")+'">'+m.urg+'</span>'+(m.target?' <span class="rf-tg">→ '+htmlEscape(m.target)+'</span>':'');
+}
 function issueRowHTML(is,today){
   var icon=ISSUE_TYPE_ICON[is.type]||"ti-file-text";
   var dueTxt="";
@@ -1867,7 +1907,7 @@ function issueRowHTML(is,today){
   var mergedN=is._mergedCount||1;
   var dupBadge=mergedN>1?' <span class="tag" style="background:var(--accent-soft);color:var(--accent-deep);" title="비슷한 이슈 '+mergedN+'건을 하나로 정리했어요"><i class="ti ti-copy" style="font-size:10.5px;vertical-align:-1px;"></i> 중복 '+mergedN+'건 정리</span>':"";
   return '<div class="issue-row" data-issue-key="'+attrEscape(issueRowKey(is.store,is.type,is.content))+'"><i class="ti '+icon+' icon"></i><div class="body">'
-    +'<div class="meta">'+(is.store?'<b style="color:var(--ink);">'+htmlEscape(is.store)+'</b>':'')+(is.type?' · '+htmlEscape(is.type):'')+(is.y?' · '+is.m+'/'+is.d+' 등록':'')+dupBadge+'</div>'
+    +'<div class="meta">'+(is.store?'<b style="color:var(--ink);">'+htmlEscape(is.store)+'</b>':'')+(is.type?' · '+htmlEscape(is.type):'')+(is.y?' · '+is.m+'/'+is.d+' 등록':'')+dupBadge+rfIssueChips(is)+'</div>'
     +'<div class="txt">'+htmlEscape(is.content)+'</div>'+dueTxt+noteTxt
     +'</div><div class="issue-right">'+seg+resolveInput+'</div></div>';
 }
@@ -2359,7 +2399,7 @@ function renderHome(Y,M){
   var miss=schedule.filter(function(e){ return storeList.indexOf(e.t)>=0&&isMissing(e); }).sort(function(a,b){return toDate(b)-toDate(a);});
   var cardMiss='<div class="card home-card"><h2><i class="ti ti-file-alert"></i>보고서 미제출<span class="hc-n">'+miss.length+'</span></h2>'
     +(miss.length?miss.slice(0,6).map(function(e){
-        return '<div class="hrow"><span class="dt">'+e.m+'/'+e.d+'</span><span class="nm">'+hEsc(e.t)+'</span><a class="go on" href="'+reportFormLink(e)+'" target="_blank" rel="noopener">보고서 작성</a></div>';
+        return '<div class="hrow"><span class="dt">'+e.m+'/'+e.d+'</span><span class="nm">'+hEsc(e.t)+'</span><a class="go on" href="#" data-rf="'+attrEscape(e.t+"|"+e.y+"-"+rfPad(e.m)+"-"+rfPad(e.d))+'">보고서 작성</a></div>';
       }).join("")+(miss.length>6?'<div class="ts-more">외 '+(miss.length-6)+'건</div>':''):'<div class="ts-empty">제출할 보고서가 없어요 🎉</div>')+'</div>';
 
   var mv=schedule.filter(function(e){ return e.y===Y&&e.m===M&&storeList.indexOf(e.t)>=0; });
@@ -2555,6 +2595,170 @@ function loadCSV(url,timeoutMs){
     .catch(function(e){ if(timer)clearTimeout(timer); throw e; });
 }
 
+/* ===== 현장 기록(앱 내 보고서 작성) ===== */
+var appReports=[], formReports=[], directActs=[];
+var RF_TOUCH=["마네킹 코디","행거 조닝","POP 교체","집기 정리","조명·청소","기타"];
+var RF_VOC_TAGS=["좋았던 것","문의 많음","아쉬움","품절·사이즈","연출 반응 좋음","연출 아쉬움","고객층 변화"];
+var RF_VOC_MAP={"고객층 변화":"고객동향","연출 반응 좋음":"VM 분석 및 인사이트","연출 아쉬움":"VM 분석 및 인사이트"};
+var RF_ACT_TYPES=["시설·인테리어","집기·비품","상품·재고","운영·인력","VMD 요청","기타"];
+var RF_URG=["급함","보통","참고"];
+var RF_TARGETS=["인테리어 업체","본사","타팀","VM"];
+var RF_SCORE_ITEMS=["매장관리","근무상태","디스플레이"];
+var rf=null;
+function rfPad(n){ return (n<10?"0":"")+n; }
+function rfToday(){ var d=new Date(); return d.getFullYear()+"-"+rfPad(d.getMonth()+1)+"-"+rfPad(d.getDate()); }
+function rfBlank(store,date){ return {id:"",store:store||"",date:date||rfToday(),touch:[],photo:"",scores:{},note:"",voc:[],acts:[],vocTag:"",actType:"",actUrg:"보통",actTarget:""}; }
+function rfSaveDraft(){ try{ if(rf) localStorage.setItem("vmrep-draft",JSON.stringify(rf)); }catch(e){} }
+function rfClearDraft(){ try{ localStorage.removeItem("vmrep-draft"); }catch(e){} }
+function openReportForm(store,date){
+  var id=store&&date?store+"|"+date:"";
+  var ex=id?appReports.filter(function(w){return w.id===id;})[0]:null;
+  var draft=null; try{ draft=JSON.parse(localStorage.getItem("vmrep-draft")||"null"); }catch(e){}
+  if(ex){ rf=JSON.parse(JSON.stringify(ex)); rf.vocTag="";rf.actType="";rf.actUrg="보통";rf.actTarget=""; }
+  else if(draft && (!store || (draft.store===store&&draft.date===date))){ rf=draft; }
+  else rf=rfBlank(store,date);
+  renderReportForm();
+}
+function rfChips(list,sel,attr,multi){
+  return list.map(function(v){
+    var on=multi?(sel||[]).indexOf(v)>=0:sel===v;
+    return '<button type="button" class="rf-chip'+(on?" on":"")+'" '+attr+'="'+attrEscape(v)+'">'+htmlEscape(v)+'</button>';
+  }).join("");
+}
+function renderReportForm(){
+  var host=document.getElementById("rf-host");
+  if(!host){ host=document.createElement("div"); host.id="rf-host"; document.body.appendChild(host); }
+  if(!rf){ host.innerHTML=""; document.body.classList.remove("rf-open"); return; }
+  document.body.classList.add("rf-open");
+  var stores=storeList.slice();
+  var storeOpts='<option value="">매장 선택</option>'+stores.map(function(s){return '<option'+(s===rf.store?" selected":"")+'>'+htmlEscape(s)+'</option>';}).join("");
+  var scoreRows=RF_SCORE_ITEMS.map(function(k){
+    return '<div class="rf-score"><span>'+k+'</span><div>'+["A","B","C"].map(function(g){return '<button type="button" class="rf-chip rf-g'+(rf.scores[k]===g?" on":"")+'" data-rf-score="'+k+'" data-g="'+g+'">'+g+'</button>';}).join("")+'</div></div>';
+  }).join("");
+  var vocList=rf.voc.map(function(v,i){ return '<div class="rf-item"><b>'+htmlEscape(v.tag)+'</b> '+htmlEscape(v.text)+'<button type="button" data-rf-delvoc="'+i+'" aria-label="삭제">×</button></div>'; }).join("");
+  var actList=rf.acts.map(function(a,i){ return '<div class="rf-item"><b>'+htmlEscape(a.type)+'</b> <span class="rf-u rf-u-'+(a.urg==="급함"?"hot":a.urg==="참고"?"ref":"mid")+'">'+a.urg+'</span>'+(a.target?' <span class="rf-tg">→ '+htmlEscape(a.target)+'</span>':'')+'<div>'+htmlEscape(a.text)+'</div><button type="button" data-rf-delact="'+i+'" aria-label="삭제">×</button></div>'; }).join("");
+  var formLink=(rf.store&&rf.date)?reportFormLink({t:rf.store,y:+rf.date.slice(0,4),m:+rf.date.slice(5,7),d:+rf.date.slice(8,10)}):REPORT_FORM_URL;
+  host.innerHTML='<div class="rf-back" data-rf-close></div><div class="rf-sheet" role="dialog" aria-label="현장 기록">'
+    +'<div class="rf-hd"><h3>현장 기록</h3><button type="button" class="rf-x" data-rf-close aria-label="닫기">×</button></div>'
+    +'<div class="rf-body">'
+    +'<div class="rf-row"><select id="rf-store">'+storeOpts+'</select><input type="date" id="rf-date" value="'+rf.date+'"></div>'
+    +'<h4>① 방문 기록</h4>'
+    +'<div class="rf-lbl">터치업 한 것</div><div class="rf-chips">'+rfChips(RF_TOUCH,rf.touch,"data-rf-touch",true)+'</div>'
+    +'<div class="rf-lbl">전후 사진 링크</div><input type="url" id="rf-photo" placeholder="드라이브·앨범 공유 링크" value="'+attrEscape(rf.photo)+'">'
+    +'<div class="rf-lbl">상태 점수</div>'+scoreRows
+    +'<div class="rf-lbl">한 줄 총평</div><input type="text" id="rf-note" placeholder="오늘 방문 한 줄 요약" value="'+attrEscape(rf.note)+'">'
+    +'<h4>② 현장 반응 <small>선택</small></h4>'
+    +vocList+'<div class="rf-chips">'+rfChips(RF_VOC_TAGS,rf.vocTag,"data-rf-vtag",false)+'</div>'
+    +'<div class="rf-add"><input type="text" id="rf-voctext" placeholder="들은 얘기·관찰한 점"><button type="button" class="rf-btn" data-rf-addvoc>추가</button></div>'
+    +'<h4>③ 처리할 건 <small>선택 · 이슈 트래커로 등록</small></h4>'
+    +actList
+    +'<div class="rf-lbl">유형</div><div class="rf-chips">'+rfChips(RF_ACT_TYPES,rf.actType,"data-rf-atype",false)+'</div>'
+    +'<div class="rf-lbl">긴급도</div><div class="rf-chips">'+rfChips(RF_URG,rf.actUrg,"data-rf-aurg",false)+'</div>'
+    +'<div class="rf-lbl">전달 대상</div><div class="rf-chips">'+rfChips(RF_TARGETS,rf.actTarget,"data-rf-atarget",false)+'</div>'
+    +'<div class="rf-add"><input type="text" id="rf-acttext" placeholder="처리가 필요한 내용"><button type="button" class="rf-btn" data-rf-addact>추가</button></div>'
+    +'<div class="rf-hint">‘참고’는 이슈로 등록되지 않고 보고서에만 기록돼요.</div>'
+    +'</div>'
+    +'<div class="rf-ft"><a href="'+formLink+'" target="_blank" rel="noopener" class="rf-alt">구글폼으로 작성</a>'
+    +(rf.id?'<button type="button" class="rf-del" data-rf-delete>삭제</button>':'')
+    +'<button type="button" class="rf-save" data-rf-save>저장</button></div></div>';
+}
+function rfReadInputs(){
+  var g=function(id){var el=document.getElementById(id);return el?el.value:null;};
+  if(g("rf-store")!==null) rf.store=g("rf-store");
+  if(g("rf-date")) rf.date=g("rf-date");
+  if(g("rf-photo")!==null) rf.photo=g("rf-photo").trim();
+  if(g("rf-note")!==null) rf.note=g("rf-note").trim();
+}
+function rfPush(w){
+  fetch(WORKLOG_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"saveReport",report:w})}).catch(function(){});
+}
+function rfSave(){
+  rfReadInputs();
+  var pend=document.getElementById("rf-voctext"); if(pend&&pend.value.trim()&&rf.vocTag){ rf.voc.push({tag:rf.vocTag,text:pend.value.trim()}); }
+  var pa=document.getElementById("rf-acttext"); if(pa&&pa.value.trim()&&rf.actType){ rf.acts.push({type:rf.actType,urg:rf.actUrg||"보통",target:rf.actTarget,text:pa.value.trim()}); }
+  if(!rf.store||!rf.date){ alert("매장과 방문일을 선택해 주세요."); return; }
+  var oldId=rf.id, w={id:rf.store+"|"+rf.date,store:rf.store,date:rf.date,touch:rf.touch,photo:rf.photo,note:rf.note,scores:rf.scores,voc:rf.voc,acts:rf.acts,ts:Date.now()};
+  if(oldId&&oldId!==w.id) rfDeleteRemote(oldId);
+  appReports=appReports.filter(function(x){return x.id!==w.id&&x.id!==oldId;}); appReports.push(w);
+  if(WORKLOG_URL) rfPush(w);
+  rf=null; rfClearDraft(); renderReportForm(); rfRefreshAll();
+}
+function rfDeleteRemote(id){ if(WORKLOG_URL) fetch(WORKLOG_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"deleteReport",id:id})}).catch(function(){}); }
+function rfDelete(){
+  if(!rf||!rf.id) return;
+  if(!confirm("이 보고서를 삭제할까요?")) return;
+  var id=rf.id; appReports=appReports.filter(function(x){return x.id!==id;}); rfDeleteRemote(id);
+  rf=null; rfClearDraft(); renderReportForm(); rfRefreshAll();
+}
+function appToReport(w){
+  var p=w.date.split("-"); var pts={A:5,B:3,C:1}, sc={};
+  RF_SCORE_ITEMS.forEach(function(k){ sc[k]=pts[(w.scores||{})[k]]||null; });
+  var buckets={"고객동향":[],"상품 VOC 및 판매 동향":[],"VM 분석 및 인사이트":[]};
+  (w.voc||[]).forEach(function(v){ buckets[RF_VOC_MAP[v.tag]||"상품 VOC 및 판매 동향"].push("- ["+v.tag+"] "+v.text); });
+  (w.acts||[]).forEach(function(a){ if(a.urg==="참고") buckets["상품 VOC 및 판매 동향"].push("- [참고·"+a.type+"] "+a.text); });
+  var st={summary:(w.note||"")}, any=!!w.note;
+  Object.keys(buckets).forEach(function(k){ st[k]=buckets[k].join("\n"); if(st[k]) any=true; });
+  var touch=(w.touch||[]).length?"터치업: "+w.touch.join(", "):"";
+  return {y:+p[0],m:+p[1],d:+p[2],store:w.store,link:w.photo||"",summary:(w.note||touch),scores:sc,structured:any?st:null,aiLabels:null,_app:true,_appId:w.id,_touch:touch};
+}
+function rebuildReports(){
+  var keys={}; appReports.forEach(function(w){ keys[w.store+"|"+w.date]=1; });
+  var base=formReports.filter(function(r){ return !keys[r.store+"|"+r.y+"-"+rfPad(r.m)+"-"+rfPad(r.d)]; });
+  reports=base.concat(appReports.map(appToReport));
+  if(appReports.length) useReportStatus=true;
+}
+function syncDirectIssues(){
+  directActs=[];
+  appReports.forEach(function(w){
+    var p=w.date.split("-");
+    (w.acts||[]).forEach(function(a){
+      if(a.urg==="참고") return;
+      directActs.push({store:w.store,type:a.type,content:a.text,urg:a.urg,target:a.target});
+      registerIssue(w.store,a.type,a.text,{y:+p[0],m:+p[1],d:+p[2]});
+    });
+  });
+}
+function directMeta(is){ return directActs.filter(function(a){return issueMatch(is,a.store,a.type,a.content);})[0]||null; }
+function rfRefreshAll(){
+  schedule=schedule.filter(function(e){ return !(e._adhoc&&e._report&&e._report._app); });
+  rebuildReports(); matchReports(); syncIssuesFromReports(); render();
+}
+function rfLoadRemote(){
+  if(!WORKLOG_URL) return Promise.resolve();
+  var t=new Promise(function(res){ setTimeout(res,8000); });
+  var f=fetch(WORKLOG_URL+"?action=reports").then(function(r){return r.json();}).then(function(j){
+    if(j&&j.ok&&Array.isArray(j.reports)) appReports=j.reports.filter(function(w){return w&&w.store&&w.date;}).map(function(w){w.id=w.store+"|"+w.date;return w;});
+  }).catch(function(){});
+  return Promise.race([f,t]);
+}
+document.addEventListener("click",function(ev){
+  var t=ev.target.closest&&ev.target.closest("[data-rf],[data-rf-close],[data-rf-touch],[data-rf-score],[data-rf-vtag],[data-rf-addvoc],[data-rf-delvoc],[data-rf-atype],[data-rf-aurg],[data-rf-atarget],[data-rf-addact],[data-rf-delact],[data-rf-save],[data-rf-delete]");
+  if(!t) return;
+  if(t.hasAttribute("data-rf")){ ev.preventDefault(); var v=t.getAttribute("data-rf"); var i=v.lastIndexOf("|"); if(v==="new") openReportForm(); else openReportForm(v.slice(0,i),v.slice(i+1)); return; }
+  if(!rf) return;
+  ev.preventDefault();
+  if(t.hasAttribute("data-rf-close")){ rfReadInputs(); rfSaveDraft(); rf=null; renderReportForm(); return; }
+  if(t.hasAttribute("data-rf-save")){ rfSave(); return; }
+  if(t.hasAttribute("data-rf-delete")){ rfDelete(); return; }
+  rfReadInputs();
+  if(t.hasAttribute("data-rf-touch")){ var k=t.getAttribute("data-rf-touch"),ix=rf.touch.indexOf(k); if(ix>=0) rf.touch.splice(ix,1); else rf.touch.push(k); }
+  else if(t.hasAttribute("data-rf-score")){ var c=t.getAttribute("data-rf-score"),g=t.getAttribute("data-g"); rf.scores[c]=(rf.scores[c]===g)?null:g; }
+  else if(t.hasAttribute("data-rf-vtag")){ var vt=t.getAttribute("data-rf-vtag"); rf.vocTag=(rf.vocTag===vt)?"":vt; }
+  else if(t.hasAttribute("data-rf-addvoc")){ var el=document.getElementById("rf-voctext"); if(el.value.trim()&&rf.vocTag){ rf.voc.push({tag:rf.vocTag,text:el.value.trim()}); rf.vocTag=""; } else { alert("태그를 고르고 내용을 적어 주세요."); return; } }
+  else if(t.hasAttribute("data-rf-delvoc")){ rf.voc.splice(+t.getAttribute("data-rf-delvoc"),1); }
+  else if(t.hasAttribute("data-rf-atype")){ var at=t.getAttribute("data-rf-atype"); rf.actType=(rf.actType===at)?"":at; }
+  else if(t.hasAttribute("data-rf-aurg")){ rf.actUrg=t.getAttribute("data-rf-aurg"); }
+  else if(t.hasAttribute("data-rf-atarget")){ var tg=t.getAttribute("data-rf-atarget"); rf.actTarget=(rf.actTarget===tg)?"":tg; }
+  else if(t.hasAttribute("data-rf-addact")){ var ea=document.getElementById("rf-acttext"); if(ea.value.trim()&&rf.actType){ rf.acts.push({type:rf.actType,urg:rf.actUrg||"보통",target:rf.actTarget,text:ea.value.trim()}); rf.actType="";rf.actTarget="";rf.actUrg="보통"; } else { alert("유형을 고르고 내용을 적어 주세요."); return; } }
+  else if(t.hasAttribute("data-rf-delact")){ rf.acts.splice(+t.getAttribute("data-rf-delact"),1); }
+  var vtx=(document.getElementById("rf-voctext")||{}).value, atx=(document.getElementById("rf-acttext")||{}).value;
+  rfSaveDraft(); renderReportForm();
+  if(vtx&&document.getElementById("rf-voctext")&&rf.vocTag) document.getElementById("rf-voctext").value=vtx;
+  if(atx&&document.getElementById("rf-acttext")&&rf.actType) document.getElementById("rf-acttext").value=atx;
+});
+document.addEventListener("input",function(ev){ if(rf&&ev.target.closest&&ev.target.closest(".rf-sheet")){ rfReadInputs(); rfSaveDraft(); } });
+(function(){ var b=document.createElement("button"); b.type="button"; b.className="rf-fab"; b.setAttribute("data-rf","new"); b.innerHTML='<i class="ti ti-pencil-plus"></i> 현장 기록'; document.body.appendChild(b); })();
+
 function init(){
   var jobs=[];
   if(SCHEDULE_CSV_URL){ jobs.push(loadCSV(SCHEDULE_CSV_URL).then(function(rows){schedule=normalize(rows);})); }
@@ -2564,7 +2768,9 @@ function init(){
   if(REPORTS_CSV_URL){ jobs.push(loadCSV(REPORTS_CSV_URL).then(function(rows){ reports=normalizeReports(rows); useReportStatus=true; }).catch(function(){ useReportStatus=false; })); }
   if(ISSUES_CSV_URL){ jobs.push(loadCSV(ISSUES_CSV_URL).then(function(rows){ issues=normalizeIssues(rows); }).catch(function(){ issues=[]; })); }
   if(INTERIOR_CSV_URL){ jobs.push(loadCSV(INTERIOR_CSV_URL).then(function(rows){ interiorData=normalizeInterior(rows); }).catch(function(){ interiorData={}; })); }
+  if(WORKLOG_URL){ jobs.push(rfLoadRemote()); }
   Promise.all(jobs).then(function(){
+    formReports=reports.slice(); if(appReports.length) rebuildReports();
     if(!schedule.length){ usingSample=true; schedule=normalize(SAMPLE_SCHEDULE.map(function(r){return r;})); }
     if(!storeList.length){ storeList=SAMPLE_STORES.slice(); }
     schedule.sort(function(a,b){return (a.y-b.y)||(a.m-b.m)||(a.d-b.d);});
