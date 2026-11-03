@@ -2962,6 +2962,24 @@ function init(){
   });
 }
 init();
+/* 새 버전 확인: 홈 화면 앱은 옛 화면을 오래 들고 있어서, 열 때마다 서버의 최신 여부를 확인해 알려줍니다 */
+function checkNewVersion(){
+  try{
+    if(location.protocol==="file:") return;
+    fetch(location.pathname+"?v="+Date.now(),{method:"HEAD",cache:"no-store"}).then(function(r){
+      var lm=r.headers.get("last-modified"); if(!lm) return;
+      if(new Date(lm).getTime()>new Date(document.lastModified).getTime()+1000){
+        var b=document.createElement("button"); b.type="button";
+        b.style.cssText="position:fixed;left:50%;transform:translateX(-50%);top:12px;z-index:200;border:0;border-radius:999px;background:#D65C82;color:#fff;padding:10px 18px;font:inherit;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.2);cursor:pointer;";
+        b.textContent="새 버전이 있어요 · 눌러서 업데이트";
+        b.onclick=function(){ location.replace(location.pathname+"?r="+Date.now()); };
+        document.body.appendChild(b);
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+setTimeout(checkNewVersion,2500);
+document.addEventListener("visibilitychange",function(){ if(!document.hidden) setTimeout(checkNewVersion,500); });
 </script>
 </body>
 </html>
