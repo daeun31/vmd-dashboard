@@ -2689,7 +2689,7 @@ function renderReportForm(){
     +'<button type="button" class="rf-save" data-rf-save>저장</button></div></div>';
   var nb=host.querySelector(".rf-body"); if(nb) nb.scrollTop=keepTop;
 }
-var RF_SLOTS=[["전면","전면 파노라마",true],["마네킹","마네킹",true],["기타","기타",false]];
+var RF_SLOTS=[["전면","전면 파노라마",true],["마네킹","마네킹",false],["행거","행거",false],["디티페이블","디티페이블",false],["기타","기타",false]];
 function rfPhotoHTML(){
   return [["before","비포"],["after","애프터"]].map(function(ph){
     var cells=RF_SLOTS.map(function(sl){
