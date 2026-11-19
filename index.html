@@ -504,8 +504,19 @@ body.rf-open .rf-fab{display:none}
 .rf-tmp{border:1px solid var(--ink);background:#fff;color:var(--ink);border-radius:12px;padding:12px 16px;font:inherit;font-size:14px;cursor:pointer}
 .rf-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;z-index:300;background:var(--ink);color:#fff;border-radius:999px;padding:10px 18px;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
 .cmp-row{margin-bottom:14px}.cmp-t{font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:6px}
-.cmp-g{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.cmp-c{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:12px;border:1px dashed var(--line)}
+.cmp-g{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:300px}
+details.cmp-box>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px}
+details.cmp-box>summary::-webkit-details-marker{display:none}
+details.cmp-box>summary:after{content:'펼치기';margin-left:auto;font-size:11.5px;font-weight:500;color:var(--ink-3)}
+details.cmp-box[open]>summary:after{content:'접기'}
+.cmp-c.has{cursor:zoom-in}
+.pz{position:fixed;inset:0;z-index:400;background:rgba(15,13,10,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+.pz img{max-width:100%;max-height:78vh;border-radius:10px;object-fit:contain}
+.pz-cap{color:#fff;font-size:15px;font-weight:600;margin-bottom:12px}
+.pz-x{position:absolute;top:14px;right:20px;color:#fff;font-size:32px;cursor:pointer;line-height:1}
+.pz-n{position:absolute;top:50%;transform:translateY(-50%);color:#fff;font-size:34px;cursor:pointer;padding:10px;user-select:none}
+.pz-n.l{left:6px}.pz-n.r{right:6px}
+.cmp-c{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:12px;border:1px dashed var(--line)}
 .cmp-c.has{border:none}.cmp-c img{width:100%;height:100%;object-fit:cover;display:block}
 .cmp-c b{position:absolute;left:6px;top:6px;font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,.55);border-radius:6px;padding:1px 7px}
 .cmp-c.af b{background:var(--accent)}
@@ -2841,26 +2852,37 @@ function rfPhotoHTML(){
     return '<div class="rf-phase"><div class="rf-ph">'+ph[1]+'</div>'+cells+'</div>';
   }).join("");
 }
-function rfCompareHTML(photos){
+function rfCompareHTML(photos,open){
   var ps=(photos||[]).filter(function(x){return x&&x.id;}); if(!ps.length) return "";
   var known=RF_SLOTS.map(function(x){return x[0];});
   var groups=RF_SLOTS.map(function(sl){return {k:sl[0],label:sl[1]};});
-  var th=function(x,cls,lb){ return x?'<a class="cmp-c has '+cls+'" href="https://drive.google.com/file/d/'+x.id+'/view" target="_blank" rel="noopener"><img loading="lazy" src="https://drive.google.com/thumbnail?id='+x.id+'&sz=w600" alt=""><b>'+lb+'</b></a>':'<div class="cmp-c '+cls+'">'+lb+' 없음</div>'; };
+  var th=function(x,cls,lb,cap){ return x?'<div class="cmp-c has '+cls+'" data-lb="'+x.id+'" data-cap="'+attrEscape(cap+' · '+lb)+'"><img loading="lazy" src="https://drive.google.com/thumbnail?id='+x.id+'&sz=w300" alt=""><b>'+lb+'</b></div>':'<div class="cmp-c '+cls+'">'+lb+' 없음</div>'; };
   var out=groups.map(function(g){
     var inG=function(x){ return x.slot===g.k || (g.k==="기타"&&known.indexOf(x.slot)<0); };
     var b=ps.filter(function(x){return x.phase==="before"&&inG(x);}), a=ps.filter(function(x){return x.phase==="after"&&inG(x);});
     var n=Math.max(b.length,a.length); var rows="";
-    for(var i=0;i<n;i++) rows+='<div class="cmp-row"><div class="cmp-t">'+htmlEscape(g.label)+(n>1?' '+(i+1):'')+'</div><div class="cmp-g">'+th(b[i],"bf","비포")+th(a[i],"af","애프터")+'</div></div>';
+    for(var i=0;i<n;i++) rows+='<div class="cmp-row"><div class="cmp-t">'+htmlEscape(g.label)+(n>1?' '+(i+1):'')+'</div><div class="cmp-g">'+th(b[i],"bf","비포",g.label)+th(a[i],"af","애프터",g.label)+'</div></div>';
     return rows;
   }).join("");
-  return out?'<div class="ss-photos"><div class="ph-t" style="font-weight:600;color:var(--ink)">비포 · 애프터 비교</div>'+out+'</div>':"";
+  return out?'<div class="ss-photos"><details class="cmp-box"'+(open?' open':'')+'><summary>비포 · 애프터 비교</summary>'+out+'</details></div>':"";
 }
 function rfShowCompare(w){
   var host=document.getElementById("rf-host"); if(!host){ host=document.createElement("div"); host.id="rf-host"; document.body.appendChild(host); }
-  var html=rfCompareHTML(w.photos);
+  var html=rfCompareHTML(w.photos,true);
   host.innerHTML='<div class="rf-back" data-rfc-close></div><div class="rf-sheet" role="dialog"><div class="rf-hd"><h3>저장 완료 · '+htmlEscape(w.store)+'</h3><button type="button" class="rf-x" data-rfc-close aria-label="닫기">×</button></div><div class="rf-body">'+(html||'<div class="rf-hint" style="margin:14px 0">저장했어요. 올린 사진이 없어 비교할 내용이 없어요.</div>')+'</div><div class="rf-ft"><button type="button" class="rf-save" data-rfc-close>확인</button></div></div>';
   document.body.classList.add("rf-open");
 }
+var pzList=[],pzI=0;
+function pzShow(){ var o=document.getElementById("pz"); if(!o){ o=document.createElement("div"); o.id="pz"; o.className="pz"; document.body.appendChild(o); }
+  var it=pzList[pzI]; o.innerHTML='<span class="pz-x" data-pz="x">&times;</span>'+(pzList.length>1?'<span class="pz-n l" data-pz="p">‹</span><span class="pz-n r" data-pz="n">›</span>':'')+'<div class="pz-cap">'+htmlEscape(it.cap)+'</div><img src="https://drive.google.com/thumbnail?id='+it.id+'&sz=w1600" alt="">'; }
+document.addEventListener("click",function(e){
+  var z=e.target.closest&&e.target.closest("[data-pz]");
+  if(z){ var a=z.getAttribute("data-pz"); if(a==="x"){ document.getElementById("pz").remove(); } else { pzI=(pzI+(a==="n"?1:-1)+pzList.length)%pzList.length; pzShow(); } return; }
+  var pz=document.getElementById("pz"); if(pz&&e.target===pz){ pz.remove(); return; }
+  var c=e.target.closest&&e.target.closest(".cmp-c.has");
+  if(c){ var box=c.closest(".ss-photos"); pzList=Array.prototype.map.call(box.querySelectorAll(".cmp-c.has"),function(x){return {id:x.getAttribute("data-lb"),cap:x.getAttribute("data-cap")};}); pzI=Array.prototype.indexOf.call(box.querySelectorAll(".cmp-c.has"),c); pzShow(); return; }
+});
+document.addEventListener("keydown",function(e){ var o=document.getElementById("pz"); if(o&&e.key==="Escape") o.remove(); });
 document.addEventListener("click",function(e){ if(e.target.closest&&e.target.closest("[data-rfc-close]")&&!rf){ var h=document.getElementById("rf-host"); if(h) h.innerHTML=""; document.body.classList.remove("rf-open"); } });
 function rfShrink(file){
   return new Promise(function(res,rej){
