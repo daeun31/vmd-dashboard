@@ -251,6 +251,9 @@ body{font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;backg
 .seg-btn.active.hold{background:var(--bg);color:var(--ink-2);}
 .seg-btn.active.good{background:var(--green-soft);color:var(--green-deep);}
 .seg-btn.active.sel{background:var(--accent-soft);color:var(--accent-deep);}
+.seg-btn.active.req{background:#DCEAF5;color:#1B3A54}.seg-btn.active.no{background:#ECEAE4;color:#5F5E5A}
+@media (max-width:600px){.issue-seg .seg-btn{font-size:10.5px}}
+.issue-old{font-size:12px;color:var(--ink-3);margin:2px 0 12px}.issue-old button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:11.5px;cursor:pointer;margin-left:6px}
 .fb-status-saved{font-size:10.5px;color:var(--ink-3);}
 .fb-issue-card{grid-column:1/-1;}
 .fb-issue-item{border-top:1px dashed var(--line);padding:10px 0;}
@@ -1866,7 +1869,7 @@ function showVisitDetail(key){
             var statusHtml="";
             if(!excluded){
               var curStatus=findIssueStatus(e.t,s.label,it.label);
-              var badgeCls=curStatus==="완료"?"tag done":(curStatus==="진행중"?"tag miss":(curStatus==="보류"?"tag hold":"tag none"));
+              var badgeCls=curStatus==="완료"?"tag done":(curStatus==="진행중"?"tag miss":((curStatus==="보류"||curStatus==="반영불가")?"tag hold":(curStatus==="요청함"?"tag plan":"tag none")));
               var badgeTxt=curStatus==="완료"?"해결":curStatus;
               var issueKey=issueRowKey(e.t,s.label,it.label);
               statusHtml='<span class="'+badgeCls+' fb-status-link" style="cursor:pointer;" data-issue-key="'+attrEscape(issueKey)+'">'+badgeTxt+'</span>';
@@ -1953,8 +1956,12 @@ function setIssueField(store,type,content,field,value){
   }
 }
 
-var ISSUE_STATUS_ORDER=["미해결","진행중","보류","완료"];
-var ISSUE_STATUS_COLOR={"미해결":"#D6402E","진행중":"#E0A526","보류":"#7A7F94","완료":"#3F9E76"};
+var ISSUE_STATUS_ORDER=["미해결","요청함","진행중","보류","완료","반영불가"];
+var ISSUE_STATUS_COLOR={"미해결":"#D6402E","요청함":"#35668F","진행중":"#E0A526","보류":"#7A7F94","완료":"#3F9E76","반영불가":"#9B9B9B"};
+var issueHideOld=true;
+function issueClosed(is){ return is.status==="완료"||is.status==="반영불가"; }
+function issueOld(is){ if(!issueClosed(is)) return false; var d=is.resolved||(is.y?{y:is.y,m:is.m,d:is.d}:null); if(!d) return false; return d.y*12+d.m < TY*12+TM; }
+function issueUrgRank(is){ var m=directMeta(is); return (m&&m.urg==="급함"&&!issueClosed(is))?0:1; }
 var ISSUE_TYPE_ICON={"매장요청사항":"ti-clipboard-list","운영이슈 및 개선사항":"ti-alert-triangle"};
 var issueSearchQuery="", issueTypeFilter="", issueGroupMode="status";
 function issueMatchesFilter(is){
@@ -1998,7 +2005,7 @@ function rfIssueChips(is){
 function issueRowHTML(is,today){
   var icon=ISSUE_TYPE_ICON[is.type]||"ti-file-text";
   var dueTxt="";
-  if(is.due && is.status!=="완료"){
+  if(is.due && !issueClosed(is)){
     var overdue=toDate(is.due)<today;
     dueTxt='<div class="due'+(overdue?' overdue':'')+'">조치예정 '+is.due.m+'/'+is.due.d+(overdue?' · 기한 경과':'')+'</div>';
   }
@@ -2006,12 +2013,14 @@ function issueRowHTML(is,today){
   var pad2=function(n){return String(n).padStart(2,"0");};
   var resolvedVal=is.resolved?(is.resolved.y+"-"+pad2(is.resolved.m)+"-"+pad2(is.resolved.d)):"";
   var dateStr=is.y?(is.y+"-"+is.m+"-"+is.d):"";
-  var resolveInput=is.status==="완료"?('<div class="issue-resolve"><label>해결일자</label><input type="date" class="issue-date-input" data-store="'+attrEscape(is.store||"")+'" data-type="'+attrEscape(is.type||"")+'" data-content="'+attrEscape(is.content||"")+'" value="'+resolvedVal+'"></div>'):"";
+  var resolveInput=(is.status==="완료"||is.status==="반영불가")?('<div class="issue-resolve"><label>해결일자</label><input type="date" class="issue-date-input" data-store="'+attrEscape(is.store||"")+'" data-type="'+attrEscape(is.type||"")+'" data-content="'+attrEscape(is.content||"")+'" value="'+resolvedVal+'"></div>'):"";
   var seg='<div class="fb-seg issue-seg" data-store="'+attrEscape(is.store||"")+'" data-type="'+attrEscape(is.type||"")+'" data-content="'+attrEscape(is.content||"")+'" data-date="'+dateStr+'">'
     +'<button class="seg-btn'+(is.status==="미해결"?" active bad":"")+'" data-set="미해결">미해결</button>'
+    +'<button class="seg-btn'+(is.status==="요청함"?" active req":"")+'" data-set="요청함">요청함</button>'
     +'<button class="seg-btn'+(is.status==="진행중"?" active mid":"")+'" data-set="진행중">진행중</button>'
     +'<button class="seg-btn'+(is.status==="보류"?" active hold":"")+'" data-set="보류">보류</button>'
     +'<button class="seg-btn'+(is.status==="완료"?" active good":"")+'" data-set="완료">완료</button>'
+    +'<button class="seg-btn'+(is.status==="반영불가"?" active no":"")+'" data-set="반영불가">반영불가</button>'
     +'</div>';
   var mergedN=is._mergedCount||1;
   var dupBadge=mergedN>1?' <span class="tag" style="background:var(--accent-soft);color:var(--accent-deep);" title="비슷한 이슈 '+mergedN+'건을 하나로 정리했어요"><i class="ti ti-copy" style="font-size:10.5px;vertical-align:-1px;"></i> 중복 '+mergedN+'건 정리</span>':"";
@@ -2029,12 +2038,15 @@ function renderIssuesPage(){
     typeSel.innerHTML='<option value="">전체 유형</option>'+types.map(function(t){return '<option value="'+attrEscape(t)+'"'+(t===curVal?' selected':'')+'>'+htmlEscape(t)+'</option>';}).join("");
   }
   var filtered=issues.filter(issueMatchesFilter);
-  var counts={"미해결":0,"진행중":0,"보류":0,"완료":0};
+  var allF=filtered, oldN=allF.filter(issueOld).length;
+  if(issueHideOld) filtered=filtered.filter(function(is){return !issueOld(is);});
+  var counts={"미해결":0,"요청함":0,"진행중":0,"보류":0,"완료":0,"반영불가":0};
   filtered.forEach(function(is){ counts[is.status]=(counts[is.status]||0)+1; });
   var total=filtered.length;
   document.getElementById("issue-kpis").innerHTML=
     '<div class="kpi"><div class="lbl">전체 이슈</div><div class="val">'+total+'건</div><div class="sub">'+(issueSearchQuery||issueTypeFilter?'필터 적용됨':'이슈트래커 시트 기준')+'</div></div>'
     +'<div class="kpi"><div class="lbl">미해결</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["미해결"]+';">'+(counts["미해결"]||0)+'건</div><div class="sub bad">우선 확인 필요</div></div>'
+    +'<div class="kpi"><div class="lbl">요청함</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["요청함"]+';">'+(counts["요청함"]||0)+'건</div><div class="sub">업체·팀에 전달됨</div></div>'
     +'<div class="kpi"><div class="lbl">진행중</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["진행중"]+';">'+(counts["진행중"]||0)+'건</div><div class="sub">조치 진행 중</div></div>'
     +'<div class="kpi"><div class="lbl">보류</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["보류"]+';">'+(counts["보류"]||0)+'건</div><div class="sub">잠시 보류됨</div></div>'
     +'<div class="kpi"><div class="lbl">완료</div><div class="val" style="color:'+ISSUE_STATUS_COLOR["완료"]+';">'+(counts["완료"]||0)+'건</div><div class="sub">조치 완료</div></div>';
@@ -2048,6 +2060,7 @@ function renderIssuesPage(){
     return;
   }
   filtered=dedupeIssues(filtered);
+  var oldBar=(oldN?'<div class="issue-old">지난달 이전에 끝난 이슈 '+oldN+'건 '+(issueHideOld?'숨김':'표시 중')+'<button data-issue-old="1">'+(issueHideOld?'보기':'숨기기')+'</button></div>':'');
 
   if(issueGroupMode==="store"){
     var byStore={}, storeOrder=[];
@@ -2057,16 +2070,17 @@ function renderIssuesPage(){
       byStore[k].push(is);
     });
     storeOrder.sort(function(a,b){
-      var ua=byStore[a].filter(function(i){return i.status!=="완료";}).length;
-      var ub=byStore[b].filter(function(i){return i.status!=="완료";}).length;
+      var ua=byStore[a].filter(function(i){return !issueClosed(i);}).length;
+      var ub=byStore[b].filter(function(i){return !issueClosed(i);}).length;
       return ub-ua;
     });
-    document.getElementById("issue-list").innerHTML=storeOrder.map(function(store){
+    document.getElementById("issue-list").innerHTML=oldBar+storeOrder.map(function(store){
       var list=byStore[store].slice().sort(function(a,b){
+        var ua=issueUrgRank(a)-issueUrgRank(b); if(ua) return ua;
         var da=a.y?toDate(a):new Date(0), db=b.y?toDate(b):new Date(0);
         return db-da;
       });
-      var openCnt=list.filter(function(i){return i.status!=="완료";}).length;
+      var openCnt=list.filter(function(i){return !issueClosed(i);}).length;
       return '<div class="issue-grp"><div class="issue-grp-hd"><span class="dot" style="background:var(--accent);"></span>'+htmlEscape(store)+'<span class="cnt">미완료 '+openCnt+'건 · 총 '+list.length+'건</span></div>'
         +list.map(function(is){ return issueRowHTML(is,today); }).join("")
         +'</div>';
@@ -2074,8 +2088,9 @@ function renderIssuesPage(){
     return;
   }
 
-  document.getElementById("issue-list").innerHTML=ISSUE_STATUS_ORDER.map(function(st){
+  document.getElementById("issue-list").innerHTML=oldBar+ISSUE_STATUS_ORDER.map(function(st){
     var list=filtered.filter(function(is){return is.status===st;}).sort(function(a,b){
+      var ua=issueUrgRank(a)-issueUrgRank(b); if(ua) return ua;
       var da=a.y?toDate(a):new Date(0), db=b.y?toDate(b):new Date(0);
       return db-da;
     });
@@ -2721,6 +2736,8 @@ document.addEventListener("click",function(e){
     renderStores();
     return;
   }
+  var oldBtn=e.target.closest("[data-issue-old]");
+  if(oldBtn){ issueHideOld=!issueHideOld; renderIssuesPage(); return; }
   var groupModeBtn=e.target.closest("#issue-group-mode .seg-btn");
   if(groupModeBtn){
     document.querySelectorAll("#issue-group-mode .seg-btn").forEach(function(b){ b.classList.toggle("active",b===groupModeBtn); b.classList.toggle("sel",b===groupModeBtn); });
@@ -2739,6 +2756,8 @@ document.addEventListener("click",function(e){
       b.classList.toggle("mid",on&&status==="진행중");
       b.classList.toggle("hold",on&&status==="보류");
       b.classList.toggle("good",on&&status==="완료");
+      b.classList.toggle("req",on&&status==="요청함");
+      b.classList.toggle("no",on&&status==="반영불가");
     });
     setIssueStatus(wrap.getAttribute("data-store"),wrap.getAttribute("data-type"),wrap.getAttribute("data-content"),wrap.getAttribute("data-date"),status);
   }
