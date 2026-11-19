@@ -504,7 +504,8 @@ body.rf-open .rf-fab{display:none}
 .rf-tmp{border:1px solid var(--ink);background:#fff;color:var(--ink);border-radius:12px;padding:12px 16px;font:inherit;font-size:14px;cursor:pointer}
 .rf-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;z-index:300;background:var(--ink);color:#fff;border-radius:999px;padding:10px 18px;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
 .cmp-row{margin-bottom:14px}.cmp-t{font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:6px}
-.cmp-g{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:300px}
+.cmp-strip{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+.cmp-pair{flex:none;width:224px;display:grid;grid-template-columns:1fr 1fr;gap:4px;scroll-snap-align:start}
 details.cmp-box>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px}
 details.cmp-box>summary::-webkit-details-marker{display:none}
 details.cmp-box>summary:after{content:'펼치기';margin-left:auto;font-size:11.5px;font-weight:500;color:var(--ink-3)}
@@ -2860,9 +2861,10 @@ function rfCompareHTML(photos,open){
   var out=groups.map(function(g){
     var inG=function(x){ return x.slot===g.k || (g.k==="기타"&&known.indexOf(x.slot)<0); };
     var b=ps.filter(function(x){return x.phase==="before"&&inG(x);}), a=ps.filter(function(x){return x.phase==="after"&&inG(x);});
-    var n=Math.max(b.length,a.length); var rows="";
-    for(var i=0;i<n;i++) rows+='<div class="cmp-row"><div class="cmp-t">'+htmlEscape(g.label)+(n>1?' '+(i+1):'')+'</div><div class="cmp-g">'+th(b[i],"bf","비포",g.label)+th(a[i],"af","애프터",g.label)+'</div></div>';
-    return rows;
+    var n=Math.max(b.length,a.length); if(!n) return "";
+    var rows="";
+    for(var i=0;i<n;i++) rows+='<div class="cmp-pair">'+th(b[i],"bf","비포",g.label+(n>1?' '+(i+1):''))+th(a[i],"af","애프터",g.label+(n>1?' '+(i+1):''))+'</div>';
+    return '<div class="cmp-row"><div class="cmp-t">'+htmlEscape(g.label)+(n>1?' <span style="font-weight:400;color:var(--ink-3)">'+n+'쌍 · 옆으로 밀어서 보기</span>':'')+'</div><div class="cmp-strip">'+rows+'</div></div>';
   }).join("");
   return out?'<div class="ss-photos"><details class="cmp-box"'+(open?' open':'')+'><summary>비포 · 애프터 비교</summary>'+out+'</details></div>':"";
 }
